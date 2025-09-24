@@ -1,0 +1,35 @@
+node_modules
+dist
+.DS_Store
+server/public
+vite.config.ts.*
+*.tar.gz
+
+# Environment files
+.env
+.env.*
+!.env.example
+.env.local
+.env.production
+.env.development
+deployment.env
+
+# API Keys and Secrets
+*.key
+*.pem
+secrets/
+credentials/
+
+# Logs
+logs/
+*.log
+
+# PM2
+.pm2/
+
+# AWS deployment
+deployment.env
+
+# Replit specific (if any)
+.replit/
+.local/
