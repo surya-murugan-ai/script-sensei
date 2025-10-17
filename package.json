@@ -7,12 +7,14 @@
     "dev": "cross-env NODE_ENV=development tsx server/index.ts",
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "cross-env NODE_ENV=production node dist/index.js",
-    "start:pm2": "pm2 start ecosystem.config.js --env production",
-    "stop:pm2": "pm2 stop scriptsensei",
-    "restart:pm2": "pm2 restart scriptsensei",
     "check": "tsc",
     "db:push": "drizzle-kit push",
-    "postinstall": "npm run build"
+    "docker:build": "docker build -t scriptsensei:latest .",
+    "docker:run": "docker run -p 5000:5000 --env-file .env scriptsensei:latest",
+    "docker:dev": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f app",
+    "docker:rebuild": "docker-compose up -d --build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",

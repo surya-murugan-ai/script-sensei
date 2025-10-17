@@ -115,28 +115,40 @@ export default function ExtractionConfig() {
   const [activeTab, setActiveTab] = useState<string>("models");
   const { toast } = useToast();
   
-  // Initialize default prompts
-  useEffect(() => {
-    const defaultPrompts: Record<string, string> = {};
-    const defaultFields: string[] = [];
-    
-    Object.values(extractionFieldCategories).forEach(category => {
-      category.fields.forEach(field => {
-        defaultPrompts[field.id] = field.defaultPrompt;
-        defaultFields.push(field.id);
-      });
-    });
-    
-    setCustomPrompts(defaultPrompts);
-    setSelectedFields(defaultFields);
-  }, []);
-
   const { data: configs } = useQuery({
     queryKey: ['/api/configs'],
     select: (data) => data || [],
   });
   
-  // Save configuration mutation
+  // Load saved configuration from database OR initialize with defaults
+  useEffect(() => {
+    if (configs && configs.length > 0) {
+      // Find the default configuration
+      const defaultConfig = configs.find((c: any) => c.isDefault) || configs[0];
+      if (defaultConfig) {
+        setConfigName(defaultConfig.name || "Default Configuration");
+        setSelectedModels(defaultConfig.selectedModels || ["openai", "claude", "gemini"]);
+        setSelectedFields(defaultConfig.selectedFields || []);
+        setCustomPrompts(defaultConfig.customPrompts || {});
+      }
+    } else if (configs !== undefined && configs.length === 0) {
+      // No configs in database, initialize with defaults
+      const defaultPrompts: Record<string, string> = {};
+      const defaultFields: string[] = [];
+      
+      Object.values(extractionFieldCategories).forEach(category => {
+        category.fields.forEach(field => {
+          defaultPrompts[field.id] = field.defaultPrompt;
+          defaultFields.push(field.id);
+        });
+      });
+      
+      setCustomPrompts(defaultPrompts);
+      setSelectedFields(defaultFields);
+    }
+  }, [configs]);
+  
+  // Save configuration mutation (for new configs)
   const saveConfigMutation = useMutation({
     mutationFn: async (configData: any) => {
       const response = await fetch('/api/configs', {
@@ -160,6 +172,35 @@ export default function ExtractionConfig() {
       toast({
         title: "Save Failed",
         description: "Failed to save configuration. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Update configuration mutation (for existing configs)
+  const updateConfigMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string, data: any }) => {
+      const response = await fetch(`/api/configs/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) throw new Error('Failed to update configuration');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/configs'] });
+      toast({
+        title: "Configuration Updated",
+        description: "Extraction configuration has been updated successfully."
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Update Failed",
+        description: "Failed to update configuration. Please try again.",
         variant: "destructive"
       });
     }
@@ -189,6 +230,9 @@ export default function ExtractionConfig() {
   };
   
   const handleSaveConfig = async () => {
+    // Find existing default config to update it instead of creating new one
+    const existingDefaultConfig = configs?.find((c: any) => c.isDefault);
+    
     const configData = {
       name: configName,
       selectedModels,
@@ -197,7 +241,13 @@ export default function ExtractionConfig() {
       isDefault: true
     };
     
-    saveConfigMutation.mutate(configData);
+    if (existingDefaultConfig) {
+      // Update existing config
+      updateConfigMutation.mutate({ id: existingDefaultConfig.id, data: configData });
+    } else {
+      // Create new config
+      saveConfigMutation.mutate(configData);
+    }
   };
   
   const resetToDefaults = () => {
@@ -248,11 +298,11 @@ export default function ExtractionConfig() {
               </Button>
               <Button
                 onClick={handleSaveConfig}
-                disabled={saveConfigMutation.isPending}
+                disabled={saveConfigMutation.isPending || updateConfigMutation.isPending}
                 data-testid="button-save-config"
               >
                 <Save className="w-4 h-4 mr-2" />
-                {saveConfigMutation.isPending ? "Saving..." : "Save Configuration"}
+                {(saveConfigMutation.isPending || updateConfigMutation.isPending) ? "Saving..." : "Save Configuration"}
               </Button>
             </div>
           </div>

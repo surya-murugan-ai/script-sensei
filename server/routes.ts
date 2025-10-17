@@ -24,6 +24,15 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint for Docker
+  app.get("/api/health", (_req, res) => {
+    res.status(200).json({ 
+      status: "healthy", 
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    });
+  });
+
   // Get all prescriptions
   app.get("/api/prescriptions", async (req, res) => {
     try {
@@ -500,6 +509,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating config:", error);
       res.status(400).json({ error: "Invalid configuration data" });
+    }
+  });
+
+  // Update extraction configuration
+  app.put("/api/configs/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const updatedConfig = await storage.updateExtractionConfig(id, updates);
+      
+      if (!updatedConfig) {
+        return res.status(404).json({ error: "Configuration not found" });
+      }
+      
+      res.json(updatedConfig);
+    } catch (error) {
+      console.error("Error updating config:", error);
+      res.status(400).json({ error: "Failed to update configuration" });
     }
   });
 
