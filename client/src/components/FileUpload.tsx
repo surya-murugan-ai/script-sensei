@@ -176,6 +176,10 @@ export default function FileUpload({ selectedFiles: propSelectedFiles, onFilesSe
         // Wait for all processing to complete
         await Promise.allSettled(processingPromises);
         
+        // Clear uploaded files after successful processing
+        setUploadedFiles([]);
+        onFilesSelected([]);
+        
         toast({
           title: "Processing completed",
           description: `${uploadResult.prescriptions.length} prescriptions processed with AI models`,
