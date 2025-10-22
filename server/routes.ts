@@ -23,14 +23,44 @@ const upload = multer({
   }
 });
 
+// Configure multer for single file upload (processing)
+const uploadSingle = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG and PNG images are allowed.'));
+    }
+  }
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint for Docker
   app.get("/api/health", (_req, res) => {
-    res.status(200).json({ 
-      status: "healthy", 
+    res.status(200).json({
+      status: "healthy",
       timestamp: new Date().toISOString(),
       uptime: process.uptime()
     });
+  });
+
+  // Error handling middleware for multer
+  app.use((error: any, req: any, res: any, next: any) => {
+    if (error instanceof multer.MulterError) {
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ error: 'File too large. Maximum size is 10MB.' });
+      }
+      if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+        return res.status(400).json({ error: 'Unexpected field. Please check the field name.' });
+      }
+      return res.status(400).json({ error: `Upload error: ${error.message}` });
+    }
+    next(error);
   });
 
   // Get all prescriptions
@@ -299,7 +329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Process prescription with AI models (with file upload)
-  app.post("/api/prescriptions/:id/process", upload.single('file'), async (req, res) => {
+  app.post("/api/prescriptions/:id/process", uploadSingle.single('file'), async (req, res) => {
     try {
       const { id } = req.params;
       const { selectedModels, customPrompts } = req.body;

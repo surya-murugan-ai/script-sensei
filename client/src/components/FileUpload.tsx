@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,21 +6,21 @@ import { CloudUpload, X, Play, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useFileContext, UploadedFile } from "@/contexts/FileContext";
 
 interface FileUploadProps {
-  selectedFiles: File[];
-  onFilesSelected: (files: File[]) => void;
+  selectedFiles?: File[];
+  onFilesSelected?: (files: File[]) => void;
 }
 
-interface UploadedFile {
-  file: File;
-  id?: string;
-  status: 'ready' | 'processing' | 'completed' | 'error';
-  progress?: number;
-}
+// UploadedFile interface is now imported from context
 
-export default function FileUpload({ selectedFiles, onFilesSelected }: FileUploadProps) {
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+export default function FileUpload({ selectedFiles: propSelectedFiles, onFilesSelected: propOnFilesSelected }: FileUploadProps) {
+  const { selectedFiles: contextSelectedFiles, setSelectedFiles: contextSetSelectedFiles, uploadedFiles, setUploadedFiles } = useFileContext();
+  
+  // Use context values if available, otherwise fall back to props
+  const selectedFiles = contextSelectedFiles.length > 0 ? contextSelectedFiles : (propSelectedFiles || []);
+  const onFilesSelected = contextSetSelectedFiles || propOnFilesSelected || (() => {});
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -62,11 +62,11 @@ export default function FileUpload({ selectedFiles, onFilesSelected }: FileUploa
   });
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    const newFiles = acceptedFiles.map(file => ({
+    const newFiles: UploadedFile[] = acceptedFiles.map(file => ({
       file,
       status: 'ready' as const
     }));
-    setUploadedFiles(prev => [...prev, ...newFiles]);
+    setUploadedFiles((prev: UploadedFile[]) => [...prev, ...newFiles]);
     onFilesSelected([...selectedFiles, ...acceptedFiles]);
   }, [selectedFiles, onFilesSelected]);
 
@@ -80,7 +80,7 @@ export default function FileUpload({ selectedFiles, onFilesSelected }: FileUploa
   });
 
   const removeFile = (index: number) => {
-    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    setUploadedFiles((prev: UploadedFile[]) => prev.filter((_, i) => i !== index));
     onFilesSelected(selectedFiles.filter((_, i) => i !== index));
   };
 
@@ -115,23 +115,26 @@ export default function FileUpload({ selectedFiles, onFilesSelected }: FileUploa
       
       // Then process each uploaded prescription with AI
       if (uploadResult && uploadResult.prescriptions) {
-        for (const prescription of uploadResult.prescriptions) {
+        // Process all images in parallel for better performance
+        const processingPromises = uploadResult.prescriptions.map(async (prescription: any) => {
           // Find the corresponding file for this prescription
           const file = files.find(f => f.name === prescription.fileName);
-          if (file) {
-            // Update UI to show processing status
-            setUploadedFiles(prev => 
-              prev.map(uf => 
-                uf.file.name === file.name ? { ...uf, status: 'processing' } : uf
-              )
-            );
-            
-            // Create FormData for processing
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('selectedModels', JSON.stringify(selectedModels));
-            formData.append('customPrompts', JSON.stringify(customPrompts));
-            
+          if (!file) return;
+          
+          // Update UI to show processing status
+          setUploadedFiles((prev: UploadedFile[]) => 
+            prev.map((uf: UploadedFile) => 
+              uf.file.name === file.name ? { ...uf, status: 'processing' as const } : uf
+            )
+          );
+          
+          // Create FormData for processing
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('selectedModels', JSON.stringify(selectedModels));
+          formData.append('customPrompts', JSON.stringify(customPrompts));
+          
+          try {
             // Process with AI models
             const processResponse = await fetch(`/api/prescriptions/${prescription.id}/process`, {
               method: "POST",
@@ -141,25 +144,37 @@ export default function FileUpload({ selectedFiles, onFilesSelected }: FileUploa
 
             if (!processResponse.ok) {
               // Update UI to show error status
-              setUploadedFiles(prev => 
-                prev.map(uf => 
-                  uf.file.name === file.name ? { ...uf, status: 'error' } : uf
+              setUploadedFiles((prev: UploadedFile[]) => 
+                prev.map((uf: UploadedFile) => 
+                  uf.file.name === file.name ? { ...uf, status: 'error' as const } : uf
                 )
               );
               throw new Error(`Processing failed for ${prescription.fileName}`);
             } else {
-              // Update UI to show completed status
-              setUploadedFiles(prev => 
-                prev.map(uf => 
-                  uf.file.name === file.name ? { ...uf, status: 'completed' } : uf
-                )
-              );
+            // Update UI to show completed status
+            setUploadedFiles((prev: UploadedFile[]) => 
+              prev.map((uf: UploadedFile) => 
+                uf.file.name === file.name ? { ...uf, status: 'completed' as const } : uf
+              )
+            );
+              
+              // 🔥 REFRESH DATA IMMEDIATELY after each image completes
+              queryClient.invalidateQueries({ queryKey: ['/api/prescriptions'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/extraction-results'] });
             }
+          } catch (error) {
+            // Update UI to show error status
+            setUploadedFiles((prev: UploadedFile[]) => 
+              prev.map((uf: UploadedFile) => 
+                uf.file.name === file.name ? { ...uf, status: 'error' as const } : uf
+              )
+            );
+            console.error(`Processing failed for ${prescription.fileName}:`, error);
           }
-        }
+        });
         
-        // Invalidate queries to refresh data
-        queryClient.invalidateQueries({ queryKey: ['/api/prescriptions'] });
+        // Wait for all processing to complete
+        await Promise.allSettled(processingPromises);
         
         toast({
           title: "Processing completed",

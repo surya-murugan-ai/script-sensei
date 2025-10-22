@@ -38,6 +38,12 @@ export default function History() {
     select: (data) => (Array.isArray(data) ? data : []),
   });
 
+  // Get configuration to check which models were selected
+  const { data: configs } = useQuery({
+    queryKey: ['/api/configs'],
+    select: (data) => data || [],
+  });
+
   const handleViewResults = (id: string) => {
     // Navigate to home page with prescription ID in state, so results component can show this specific prescription
     setLocation("/?prescriptionId=" + id);
@@ -131,6 +137,41 @@ export default function History() {
       newSelected.delete(prescriptionId);
     }
     setSelectedPrescriptions(newSelected);
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedPrescriptions.size === 0) return;
+    
+    try {
+      // Delete all selected prescriptions with force=true for completed ones
+      const deletePromises = Array.from(selectedPrescriptions).map(async (id) => {
+        const response = await fetch(`/api/prescriptions/${id}?force=true`, {
+          method: 'DELETE',
+        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Failed to delete prescription ${id}`);
+        }
+      });
+      
+      await Promise.all(deletePromises);
+      
+      // Clear selection and refresh data
+      setSelectedPrescriptions(new Set());
+      queryClient.invalidateQueries({ queryKey: ['/api/prescriptions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/extraction-results'] });
+      
+      toast({
+        title: "Prescriptions deleted",
+        description: `${selectedPrescriptions.size} prescriptions have been permanently removed`,
+      });
+    } catch (error) {
+      toast({
+        title: "Delete failed",
+        description: error instanceof Error ? error.message : "Failed to delete selected prescriptions",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSelectAll = () => {
@@ -363,6 +404,17 @@ export default function History() {
                   Export JSON
                 </Button>
                 
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDeleteSelected}
+                  disabled={selectedPrescriptions.size === 0}
+                  data-testid="button-delete-selected"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Selected ({selectedPrescriptions.size})
+                </Button>
+                
                 {selectedPrescriptions.size > 0 && (
                   <span className="text-sm text-muted-foreground">
                     {selectedPrescriptions.size} selected
@@ -546,6 +598,11 @@ export default function History() {
                               const stats = getModelStats(results);
                               const hasResults = results.length > 0;
                               
+                              // Check if this model was selected in the configuration
+                              const defaultConfig = configs?.find((c: any) => c.isDefault) || configs?.[0];
+                              const selectedModels = defaultConfig?.selectedModels || ['openai', 'claude', 'gemini'];
+                              const wasModelSelected = selectedModels.includes(expectedModel);
+                              
                               return (
                                 <Card key={expectedModel} className="relative" data-testid={`model-card-${expectedModel}`}>
                                   <CardHeader className="pb-3">
@@ -559,7 +616,7 @@ export default function History() {
                                         className={`${getModelColor(expectedModel)} ${!hasResults ? 'opacity-50' : ''}`}
                                         data-testid={`model-${expectedModel}-badge`}
                                       >
-                                        {hasResults ? `${stats.count} fields` : 'Failed'}
+                                        {hasResults ? `${stats.count} fields` : (!wasModelSelected ? 'Not Selected' : 'Failed')}
                                       </Badge>
                                     </div>
                                   </CardHeader>
@@ -585,14 +642,27 @@ export default function History() {
                                       </>
                                     ) : (
                                       <div className="text-center py-4">
-                                        <div className="text-destructive text-sm font-medium mb-2">
-                                          Extraction Failed
-                                        </div>
-                                        <div className="text-xs text-muted-foreground">
-                                          {expectedModel === 'gemini' 
-                                            ? 'API temporarily unavailable (503)' 
-                                            : 'Processing error occurred'}
-                                        </div>
+                                        {!wasModelSelected ? (
+                                          <>
+                                            <div className="text-muted-foreground text-sm font-medium mb-2">
+                                              Model Not Selected
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                              This model was not selected in the configuration
+                                            </div>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <div className="text-destructive text-sm font-medium mb-2">
+                                              Extraction Failed
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                              {expectedModel === 'gemini' 
+                                                ? 'API temporarily unavailable (503)' 
+                                                : 'Processing error occurred'}
+                                            </div>
+                                          </>
+                                        )}
                                       </div>
                                     )}
 

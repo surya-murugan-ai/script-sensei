@@ -6,7 +6,6 @@ const navigationItems = [
   { href: "/review", icon: ScanEye, label: "Prescription Review" },
   { href: "/history", icon: History, label: "Processing History" },
   { href: "/config", icon: Settings, label: "Model Configuration" },
-  { href: "/templates", icon: Download, label: "Export Templates" },
 ];
 
 const modelStatus = [

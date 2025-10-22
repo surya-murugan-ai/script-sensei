@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link } from "wouter";
 import Sidebar from "@/components/Sidebar";
 import FileUpload from "@/components/FileUpload";
@@ -9,7 +8,6 @@ import { Download, HelpCircle, BarChart3 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 export default function Home() {
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   // Get the latest prescription for display
   const { data: prescriptions } = useQuery({
@@ -80,10 +78,7 @@ export default function Home() {
 
         {/* Main Content Area */}
         <main className="flex-1 p-6 space-y-6 overflow-auto" data-testid="main-content">
-          <FileUpload 
-            selectedFiles={selectedFiles}
-            onFilesSelected={setSelectedFiles}
-          />
+          <FileUpload />
           
           <PrescriptionFormatDisplay prescriptionId={latestPrescriptionId} />
           

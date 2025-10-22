@@ -3,6 +3,39 @@ import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { PrescriptionData, ExtractionPrompts, PrescriptionDataSchema } from "@shared/schema";
 
+// Helper function to clean extracted data and handle invalid enum values
+function cleanExtractedData(data: any): any {
+  if (!data || typeof data !== 'object') return data;
+  
+  const cleaned = { ...data };
+  
+  // Clean prescription type enum values
+  if (cleaned.prescriptionType?.type) {
+    const validTypes = ["General Medicine", "Dental", "Dermatology", "Surgical / Post-op", "Pediatric", "Gynecology / Obstetrics", "Diagnostic / Lab Referral", "Others"];
+    if (!validTypes.includes(cleaned.prescriptionType.type)) {
+      // If it's "NA" or invalid, default to "Others"
+      cleaned.prescriptionType.type = "Others";
+    }
+  }
+  
+  // Clean other enum fields that might have similar issues
+  if (cleaned.patientDetails?.gender) {
+    const validGenders = ["Male", "Female", "Other"];
+    if (!validGenders.includes(cleaned.patientDetails.gender)) {
+      cleaned.patientDetails.gender = "Other";
+    }
+  }
+  
+  // Recursively clean nested objects
+  Object.keys(cleaned).forEach(key => {
+    if (cleaned[key] && typeof cleaned[key] === 'object' && !Array.isArray(cleaned[key])) {
+      cleaned[key] = cleanExtractedData(cleaned[key]);
+    }
+  });
+  
+  return cleaned;
+}
+
 /*
 <important_code_snippet_instructions>
 The newest Anthropic model is "claude-sonnet-4-20250514", not "claude-3-7-sonnet-20250219", "claude-3-5-sonnet-20241022" nor "claude-3-sonnet-20240229". 
@@ -231,16 +264,17 @@ Medical abbreviations to recognize:
         }
       }
 
-      // Validate extracted data against schema
-      const validationResult = PrescriptionDataSchema.safeParse(extractedData);
+      // Clean and validate extracted data against schema
+      const cleanedData = cleanExtractedData(extractedData);
+      const validationResult = PrescriptionDataSchema.safeParse(cleanedData);
       if (!validationResult.success) {
         console.warn("OpenAI extracted data validation failed:", validationResult.error);
-        // Use the original data but log the issue
+        // Use the cleaned data even if validation fails
       }
       
       return {
         model: "openai",
-        data: validationResult.success ? validationResult.data : extractedData as PrescriptionData,
+        data: validationResult.success ? validationResult.data : cleanedData as PrescriptionData,
         processingTime,
         confidence: 0.85 // OpenAI doesn't provide confidence scores
       };
@@ -309,16 +343,17 @@ Medical abbreviations to recognize:
         }
       }
 
-      // Validate extracted data against schema
-      const validationResult = PrescriptionDataSchema.safeParse(extractedData);
+      // Clean and validate extracted data against schema
+      const cleanedData = cleanExtractedData(extractedData);
+      const validationResult = PrescriptionDataSchema.safeParse(cleanedData);
       if (!validationResult.success) {
         console.warn("Claude extracted data validation failed:", validationResult.error);
-        // Use the original data but log the issue
+        // Use the cleaned data even if validation fails
       }
       
       return {
         model: "claude",
-        data: validationResult.success ? validationResult.data : extractedData as PrescriptionData,
+        data: validationResult.success ? validationResult.data : cleanedData as PrescriptionData,
         processingTime,
         confidence: 0.88 // Claude typically has high accuracy
       };
@@ -379,16 +414,17 @@ Medical abbreviations to recognize:
         }
       }
 
-      // Validate extracted data against schema
-      const validationResult = PrescriptionDataSchema.safeParse(extractedData);
+      // Clean and validate extracted data against schema
+      const cleanedData = cleanExtractedData(extractedData);
+      const validationResult = PrescriptionDataSchema.safeParse(cleanedData);
       if (!validationResult.success) {
         console.warn("Gemini extracted data validation failed:", validationResult.error);
-        // Use the original data but log the issue
+        // Use the cleaned data even if validation fails
       }
       
       return {
         model: "gemini",
-        data: validationResult.success ? validationResult.data : extractedData as PrescriptionData,
+        data: validationResult.success ? validationResult.data : cleanedData as PrescriptionData,
         processingTime,
         confidence: 0.82 // Gemini confidence estimate
       };
