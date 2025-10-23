@@ -157,10 +157,13 @@ export default function FileUpload({ selectedFiles: propSelectedFiles, onFilesSe
                 uf.file.name === file.name ? { ...uf, status: 'completed' as const } : uf
               )
             );
-              
-              // 🔥 REFRESH DATA IMMEDIATELY after each image completes
-              queryClient.invalidateQueries({ queryKey: ['/api/prescriptions'] });
-              queryClient.invalidateQueries({ queryKey: ['/api/extraction-results'] });
+            
+            // 🔥 REFRESH DATA IMMEDIATELY after each image completes
+            queryClient.invalidateQueries({ queryKey: ['/api/prescriptions'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/extraction-results'] });
+            // Force refetch to ensure UI updates immediately
+            queryClient.refetchQueries({ queryKey: ['/api/prescriptions'] });
+            queryClient.refetchQueries({ queryKey: ['/api/extraction-results'] });
             }
           } catch (error) {
             // Update UI to show error status

@@ -267,6 +267,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       models = models || ["openai", "claude", "gemini"];
       prompts = prompts || {};
 
+      // Update status to processing
+      await storage.updatePrescription(id, { processingStatus: "processing" });
+
       // Extract data using AI models
       const modelResults = await aiService.extractWithAllModels(base64Image, models, prompts);
 
@@ -385,6 +388,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Final fallback to hardcoded defaults
       models = models || ['openai', 'claude', 'gemini'];
       prompts = prompts || {};
+
+      // Update status to processing
+      await storage.updatePrescription(id, { processingStatus: "processing" });
 
       // Extract data using AI models
       const modelResults = await aiService.extractWithAllModels(base64Image, models, prompts);

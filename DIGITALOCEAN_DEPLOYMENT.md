@@ -57,7 +57,7 @@ This guide will help you deploy ScriptSensei on DigitalOcean using Docker and Gi
 
 4. **Click "Create Droplet"**
 
----
+---ssh-keygen -t ed25519 -C "imswaggyboy@gmail.com"
 
 ## 🔐 Step 2: Initial Server Setup
 

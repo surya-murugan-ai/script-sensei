@@ -25,6 +25,18 @@ export default function ProcessingQueue() {
   const { data: prescriptions } = useQuery({
     queryKey: ['/api/prescriptions'],
     select: (data) => data || [],
+    refetchInterval: (data) => {
+      // Smart polling: more frequent for few images, less frequent for many images
+      const hasProcessing = Array.isArray(data) && data.some((p: any) => p.processingStatus === 'processing' || p.processingStatus === 'queued');
+      if (!hasProcessing) return false;
+      
+      // Dynamic polling based on number of processing items
+      const processingCount = data.filter((p: any) => p.processingStatus === 'processing' || p.processingStatus === 'queued').length;
+      
+      if (processingCount <= 3) return 1000; // Fast polling for few images
+      if (processingCount <= 10) return 3000; // Medium polling for moderate images
+      return 5000; // Slower polling for many images
+    },
   });
 
   const { data: configs } = useQuery({
@@ -40,6 +52,11 @@ export default function ProcessingQueue() {
       return response.json();
     },
     select: (data) => data || [],
+    refetchInterval: (data) => {
+      // Poll every 2 seconds if there are any processing prescriptions
+      const hasProcessing = Array.isArray(prescriptions) && prescriptions.some((p: any) => p.processingStatus === 'processing' || p.processingStatus === 'queued');
+      return hasProcessing ? 2000 : false;
+    },
   });
 
   // Transform real prescription data into queue items
