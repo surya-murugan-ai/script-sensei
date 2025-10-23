@@ -45,8 +45,8 @@ export default function History() {
   });
 
   const handleViewResults = (id: string) => {
-    // Navigate to home page with prescription ID in state, so results component can show this specific prescription
-    setLocation("/?prescriptionId=" + id);
+    // Navigate to results page with prescription ID parameter
+    setLocation("/results?prescriptionId=" + id);
   };
 
   const handleReprocess = async (id: string) => {

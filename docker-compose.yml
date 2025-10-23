@@ -52,6 +52,8 @@ services:
       start_period: 40s
     networks:
       - scriptsensei-network
+    # Automatically run database migrations on startup
+    command: sh -c "npm run db:push && node dist/index.js"
 
 volumes:
   postgres_data:

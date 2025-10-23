@@ -104,7 +104,7 @@ export default function ProcessingQueue() {
   }) : [];
 
   const handleViewResults = (prescriptionId: string) => {
-    setLocation(`/?prescriptionId=${prescriptionId}`);
+    setLocation(`/results?prescriptionId=${prescriptionId}`);
   };
 
   const handleCancel = async (prescriptionId: string) => {

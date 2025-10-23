@@ -1,17 +1,26 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PrescriptionFormatDisplay from "@/components/PrescriptionFormatDisplay";
 import { useQuery } from "@tanstack/react-query";
 
 export default function Results() {
-  // Get the latest prescription for display
+  const [location] = useLocation();
+  
+  // Extract prescription ID from URL parameters
+  const urlParams = new URLSearchParams(window.location.search);
+  const prescriptionIdFromUrl = urlParams.get('prescriptionId');
+  
+  // Get the latest prescription for display (fallback)
   const { data: prescriptions } = useQuery({
     queryKey: ['/api/prescriptions'],
     select: (data) => data || [],
   });
 
   const latestPrescriptionId = Array.isArray(prescriptions) && prescriptions.length > 0 ? prescriptions[0].id : null;
+  
+  // Use prescription ID from URL if available, otherwise use latest
+  const targetPrescriptionId = prescriptionIdFromUrl || latestPrescriptionId;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
@@ -35,7 +44,7 @@ export default function Results() {
         </div>
 
         {/* Prescription Format Display */}
-        <PrescriptionFormatDisplay prescriptionId={latestPrescriptionId} />
+        <PrescriptionFormatDisplay prescriptionId={targetPrescriptionId} />
       </div>
     </div>
   );
