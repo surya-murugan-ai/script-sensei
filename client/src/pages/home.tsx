@@ -15,7 +15,7 @@ export default function Home() {
     select: (data) => data || [],
   });
 
-  const latestPrescriptionId = prescriptions && prescriptions.length > 0 ? prescriptions[0].id : null;
+  const latestPrescriptionId = Array.isArray(prescriptions) && prescriptions.length > 0 ? prescriptions[0].id : null;
 
   const handleExportAll = async (format: 'csv' | 'json') => {
     try {

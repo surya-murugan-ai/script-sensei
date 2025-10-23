@@ -599,7 +599,7 @@ export default function History() {
                               const hasResults = results.length > 0;
                               
                               // Check if this model was selected in the configuration
-                              const defaultConfig = configs?.find((c: any) => c.isDefault) || configs?.[0];
+                              const defaultConfig = Array.isArray(configs) ? (configs.find((c: any) => c.isDefault) || configs[0]) : undefined;
                               const selectedModels = defaultConfig?.selectedModels || ['openai', 'claude', 'gemini'];
                               const wasModelSelected = selectedModels.includes(expectedModel);
                               

@@ -3,10 +3,24 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, FileText, Brain, Stethoscope, Pill, Heart, User, Building, MessageSquare } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Download, FileText, Brain, Stethoscope, Pill, Heart, User, Building, MessageSquare, Check, AlertTriangle } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+
+interface ExtractionField {
+  id: string;
+  label: string;
+  value: any;
+  fieldName: string;
+  finalValue: string;
+  hasConflict?: boolean;
+  gpt4vResult?: string;
+  claudeResult?: string;
+  geminiResult?: string;
+}
 
 interface PrescriptionData {
   prescriptionType?: {
@@ -73,8 +87,12 @@ export default function ExtractionResults() {
   const [targetPrescriptionId, setTargetPrescriptionId] = useState<string | null>(null);
   const [extractedData, setExtractedData] = useState<PrescriptionData | null>(null);
   const [rawExtractionData, setRawExtractionData] = useState<any[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [selectedPrescriptionForFormat, setSelectedPrescriptionForFormat] = useState<string>("");
+  const [results, setResults] = useState<ExtractionField[]>([]);
   const { toast } = useToast();
   const [location] = useLocation();
+  const queryClient = useQueryClient();
 
   const { data: prescriptions } = useQuery({
     queryKey: ['/api/prescriptions'],
@@ -240,11 +258,14 @@ export default function ExtractionResults() {
       const hasConflict = uniqueValues.size > 1;
       
       displayResults.push({
+        id: fieldName,
+        label: fieldName,
+        value: finalValue,
         fieldName,
+        finalValue,
         gpt4vResult,
         claudeResult,
         geminiResult,
-        finalValue,
         hasConflict
       });
     });

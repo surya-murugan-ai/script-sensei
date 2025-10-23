@@ -122,7 +122,7 @@ export default function ExtractionConfig() {
   
   // Load saved configuration from database OR initialize with defaults
   useEffect(() => {
-    if (configs && configs.length > 0) {
+    if (Array.isArray(configs) && configs.length > 0) {
       // Find the default configuration
       const defaultConfig = configs.find((c: any) => c.isDefault) || configs[0];
       if (defaultConfig) {
@@ -131,7 +131,7 @@ export default function ExtractionConfig() {
         setSelectedFields(defaultConfig.selectedFields || []);
         setCustomPrompts(defaultConfig.customPrompts || {});
       }
-    } else if (configs !== undefined && configs.length === 0) {
+    } else if (configs !== undefined && Array.isArray(configs) && configs.length === 0) {
       // No configs in database, initialize with defaults
       const defaultPrompts: Record<string, string> = {};
       const defaultFields: string[] = [];
@@ -231,7 +231,7 @@ export default function ExtractionConfig() {
   
   const handleSaveConfig = async () => {
     // Find existing default config to update it instead of creating new one
-    const existingDefaultConfig = configs?.find((c: any) => c.isDefault);
+    const existingDefaultConfig = Array.isArray(configs) ? configs.find((c: any) => c.isDefault) : undefined;
     
     const configData = {
       name: configName,

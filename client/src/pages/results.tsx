@@ -11,7 +11,7 @@ export default function Results() {
     select: (data) => data || [],
   });
 
-  const latestPrescriptionId = prescriptions && prescriptions.length > 0 ? prescriptions[0].id : null;
+  const latestPrescriptionId = Array.isArray(prescriptions) && prescriptions.length > 0 ? prescriptions[0].id : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
