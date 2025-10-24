@@ -136,12 +136,19 @@ jobs:
           DROPLET_USER: ${{ secrets.DROPLET_USER }}
         run: |
           ssh -o StrictHostKeyChecking=no $DROPLET_USER@$DROPLET_IP << 'ENDSSH'
-            # Navigate to app directory
-            cd ~/script-sensei || exit 1
+            # Create directory if it doesn't exist
+            mkdir -p ~/script-sensei
+            cd ~/script-sensei
             
-            # Pull latest changes
-            echo "📥 Pulling latest code..."
-            git pull origin main
+            # Clone if directory is empty, or pull if it exists
+            if [ -d ".git" ]; then
+              echo "📥 Pulling latest code..."
+              git pull origin main
+            else
+              echo "📥 Cloning repository..."
+              git clone https://github.com/${{ github.repository }}.git .
+              git checkout main
+            fi
             
             # Login to GitHub Container Registry
             echo "🔐 Logging into GitHub Container Registry..."
