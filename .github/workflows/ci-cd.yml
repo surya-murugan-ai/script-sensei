@@ -136,6 +136,27 @@ jobs:
           DROPLET_USER: ${{ secrets.DROPLET_USER }}
         run: |
           ssh -o StrictHostKeyChecking=no $DROPLET_USER@$DROPLET_IP << 'ENDSSH'
+            # Install Docker if not present
+            if ! command -v docker &> /dev/null; then
+              echo "🐳 Installing Docker..."
+              curl -fsSL https://get.docker.com -o get-docker.sh
+              sh get-docker.sh
+              rm get-docker.sh
+              echo "✅ Docker installed successfully"
+            else
+              echo "✅ Docker already installed"
+            fi
+            
+            # Install Docker Compose if not present
+            if ! command -v docker-compose &> /dev/null; then
+              echo "🐳 Installing Docker Compose..."
+              curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+              chmod +x /usr/local/bin/docker-compose
+              echo "✅ Docker Compose installed successfully"
+            else
+              echo "✅ Docker Compose already installed"
+            fi
+            
             # Create directory if it doesn't exist
             mkdir -p ~/script-sensei
             cd ~/script-sensei
