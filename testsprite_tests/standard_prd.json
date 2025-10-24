@@ -52,54 +52,46 @@
   "code_summary": {
     "tech_stack": [
       "TypeScript",
-      "React",
+      "Node.js",
       "Express.js",
       "PostgreSQL",
-      "Docker",
-      "Vite",
-      "Tailwind CSS",
-      "Radix UI",
-      "React Query",
       "Drizzle ORM",
-      "OpenAI API",
-      "Anthropic Claude API",
-      "Google Gemini API",
+      "React",
+      "Vite",
+      "Docker",
       "Sharp",
       "Multer",
-      "Zod"
+      "OpenAI API",
+      "Anthropic Claude API",
+      "Google Gemini API"
     ],
     "features": [
       {
         "name": "Health Check API",
-        "description": "Health check endpoint for monitoring application status and Docker health checks",
+        "description": "Returns application health status and uptime information",
         "files": [
           "server/routes.ts"
         ],
         "api_doc": {
-          "paths": {
+          "get": {
             "/api/health": {
-              "get": {
-                "summary": "Health Check",
-                "description": "Returns application health status",
-                "responses": {
-                  "200": {
-                    "description": "Application is healthy",
-                    "content": {
-                      "application/json": {
-                        "schema": {
-                          "type": "object",
-                          "properties": {
-                            "status": {
-                              "type": "string",
-                              "example": "healthy"
-                            },
-                            "timestamp": {
-                              "type": "string",
-                              "format": "date-time"
-                            },
-                            "uptime": {
-                              "type": "number"
-                            }
+              "summary": "Health check endpoint",
+              "responses": {
+                "200": {
+                  "description": "Application is healthy",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          },
+                          "timestamp": {
+                            "type": "string"
+                          },
+                          "uptime": {
+                            "type": "number"
                           }
                         }
                       }
@@ -113,84 +105,49 @@
       },
       {
         "name": "Prescription Management API",
-        "description": "CRUD operations for managing prescription records including upload, processing, and retrieval",
+        "description": "Upload, retrieve, and manage prescription images with AI processing",
         "files": [
           "server/routes.ts",
-          "server/storage.ts"
+          "server/storage.ts",
+          "shared/schema.ts"
         ],
         "api_doc": {
-          "paths": {
+          "get": {
             "/api/prescriptions": {
-              "get": {
-                "summary": "Get All Prescriptions",
-                "description": "Retrieve all prescription records",
-                "responses": {
-                  "200": {
-                    "description": "List of prescriptions",
-                    "content": {
-                      "application/json": {
-                        "schema": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "id": {
-                                "type": "string"
-                              },
-                              "processingStatus": {
-                                "type": "string"
-                              },
-                              "createdAt": {
-                                "type": "string",
-                                "format": "date-time"
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            },
-            "/api/prescriptions/upload": {
-              "post": {
-                "summary": "Upload Prescription Images",
-                "description": "Upload multiple prescription images for processing",
-                "requestBody": {
+              "summary": "Get all prescriptions",
+              "responses": {
+                "200": {
+                  "description": "List of prescriptions",
                   "content": {
-                    "multipart/form-data": {
+                    "application/json": {
                       "schema": {
-                        "type": "object",
-                        "properties": {
-                          "files": {
-                            "type": "array",
-                            "items": {
-                              "type": "string",
-                              "format": "binary"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                },
-                "responses": {
-                  "200": {
-                    "description": "Images uploaded successfully",
-                    "content": {
-                      "application/json": {
-                        "schema": {
+                        "type": "array",
+                        "items": {
                           "type": "object",
                           "properties": {
-                            "message": {
+                            "id": {
                               "type": "string"
                             },
-                            "prescriptionIds": {
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              }
+                            "fileName": {
+                              "type": "string"
+                            },
+                            "fileSize": {
+                              "type": "string"
+                            },
+                            "uploadedAt": {
+                              "type": "string"
+                            },
+                            "createdAt": {
+                              "type": "string"
+                            },
+                            "processingStatus": {
+                              "type": "string"
+                            },
+                            "extractedData": {
+                              "type": "object"
+                            },
+                            "imageData": {
+                              "type": "string"
                             }
                           }
                         }
@@ -201,36 +158,41 @@
               }
             },
             "/api/prescriptions/{id}": {
-              "get": {
-                "summary": "Get Prescription by ID",
-                "description": "Retrieve a specific prescription by ID",
-                "parameters": [
-                  {
-                    "name": "id",
-                    "in": "path",
-                    "required": true,
-                    "schema": {
-                      "type": "string"
-                    }
+              "summary": "Get prescription by ID",
+              "parameters": [
+                {
+                  "name": "id",
+                  "in": "path",
+                  "required": true,
+                  "schema": {
+                    "type": "string"
                   }
-                ],
-                "responses": {
-                  "200": {
-                    "description": "Prescription details",
-                    "content": {
-                      "application/json": {
-                        "schema": {
-                          "type": "object",
-                          "properties": {
-                            "id": {
-                              "type": "string"
-                            },
-                            "processingStatus": {
-                              "type": "string"
-                            },
-                            "extractedData": {
-                              "type": "object"
-                            }
+                }
+              ],
+              "responses": {
+                "200": {
+                  "description": "Prescription details with extraction results"
+                },
+                "404": {
+                  "description": "Prescription not found"
+                }
+              }
+            }
+          },
+          "post": {
+            "/api/prescriptions/upload": {
+              "summary": "Upload prescription files",
+              "requestBody": {
+                "content": {
+                  "multipart/form-data": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "files": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "binary"
                           }
                         }
                       }
@@ -238,31 +200,63 @@
                   }
                 }
               },
-              "delete": {
-                "summary": "Delete Prescription",
-                "description": "Delete a prescription record",
-                "parameters": [
-                  {
-                    "name": "id",
-                    "in": "path",
-                    "required": true,
-                    "schema": {
-                      "type": "string"
-                    }
-                  },
-                  {
-                    "name": "force",
-                    "in": "query",
-                    "required": false,
-                    "schema": {
-                      "type": "boolean"
+              "responses": {
+                "200": {
+                  "description": "Files uploaded successfully",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "prescriptions": {
+                            "type": "array"
+                          },
+                          "message": {
+                            "type": "string"
+                          }
+                        }
+                      }
                     }
                   }
-                ],
-                "responses": {
-                  "200": {
-                    "description": "Prescription deleted successfully"
+                },
+                "400": {
+                  "description": "No files uploaded or validation error"
+                },
+                "500": {
+                  "description": "Upload failed"
+                }
+              }
+            }
+          },
+          "delete": {
+            "/api/prescriptions/{id}": {
+              "summary": "Delete prescription",
+              "parameters": [
+                {
+                  "name": "id",
+                  "in": "path",
+                  "required": true,
+                  "schema": {
+                    "type": "string"
                   }
+                },
+                {
+                  "name": "force",
+                  "in": "query",
+                  "schema": {
+                    "type": "boolean"
+                  }
+                }
+              ],
+              "responses": {
+                "200": {
+                  "description": "Prescription deleted successfully"
+                },
+                "400": {
+                  "description": "Force parameter required for completed prescriptions"
+                },
+                "404": {
+                  "description": "Prescription not found"
                 }
               }
             }
@@ -271,99 +265,122 @@
       },
       {
         "name": "AI Processing API",
-        "description": "AI-powered prescription data extraction using multiple AI models (OpenAI, Claude, Gemini)",
+        "description": "Process prescriptions with AI models for data extraction",
         "files": [
+          "server/routes.ts",
           "server/aiServices.ts",
-          "server/routes.ts"
+          "server/storage.ts"
         ],
         "api_doc": {
-          "paths": {
+          "post": {
             "/api/prescriptions/{id}/process": {
-              "post": {
-                "summary": "Process Prescription with AI",
-                "description": "Extract data from prescription image using AI models",
-                "parameters": [
-                  {
-                    "name": "id",
-                    "in": "path",
-                    "required": true,
+              "summary": "Process prescription with AI models",
+              "parameters": [
+                {
+                  "name": "id",
+                  "in": "path",
+                  "required": true,
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              ],
+              "requestBody": {
+                "content": {
+                  "application/json": {
                     "schema": {
-                      "type": "string"
-                    }
-                  }
-                ],
-                "requestBody": {
-                  "content": {
-                    "multipart/form-data": {
-                      "schema": {
-                        "type": "object",
-                        "properties": {
-                          "file": {
-                            "type": "string",
-                            "format": "binary"
+                      "type": "object",
+                      "properties": {
+                        "selectedModels": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
                           }
-                        }
-                      }
-                    }
-                  }
-                },
-                "responses": {
-                  "200": {
-                    "description": "Processing completed",
-                    "content": {
-                      "application/json": {
-                        "schema": {
-                          "type": "object",
-                          "properties": {
-                            "message": {
-                              "type": "string"
-                            },
-                            "extractedData": {
-                              "type": "object"
-                            }
-                          }
+                        },
+                        "customPrompts": {
+                          "type": "object"
                         }
                       }
                     }
                   }
                 }
+              },
+              "responses": {
+                "200": {
+                  "description": "Processing completed successfully"
+                },
+                "400": {
+                  "description": "No image data available"
+                },
+                "404": {
+                  "description": "Prescription not found"
+                },
+                "500": {
+                  "description": "Processing failed"
+                }
+              }
+            },
+            "/api/prescriptions/{id}/process-existing": {
+              "summary": "Process existing prescription without file upload",
+              "parameters": [
+                {
+                  "name": "id",
+                  "in": "path",
+                  "required": true,
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              ],
+              "responses": {
+                "200": {
+                  "description": "Processing completed successfully"
+                },
+                "400": {
+                  "description": "No image data available"
+                },
+                "404": {
+                  "description": "Prescription not found"
+                }
               }
             }
-          }
-        }
-      },
-      {
-        "name": "Extraction Results API",
-        "description": "Manage and retrieve AI extraction results for prescription data",
-        "files": [
-          "server/routes.ts",
-          "server/storage.ts"
-        ],
-        "api_doc": {
-          "paths": {
+          },
+          "get": {
             "/api/extraction-results": {
-              "get": {
-                "summary": "Get All Extraction Results",
-                "description": "Retrieve all AI extraction results",
-                "responses": {
-                  "200": {
-                    "description": "List of extraction results",
-                    "content": {
-                      "application/json": {
-                        "schema": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "id": {
-                                "type": "string"
-                              },
-                              "model": {
-                                "type": "string"
-                              },
-                              "extractedData": {
-                                "type": "object"
-                              }
+              "summary": "Get all extraction results",
+              "responses": {
+                "200": {
+                  "description": "List of extraction results",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "prescriptionId": {
+                              "type": "string"
+                            },
+                            "modelName": {
+                              "type": "string"
+                            },
+                            "fieldName": {
+                              "type": "string"
+                            },
+                            "extractedValue": {
+                              "type": "string"
+                            },
+                            "confidence": {
+                              "type": "number"
+                            },
+                            "processingTime": {
+                              "type": "number"
+                            },
+                            "createdAt": {
+                              "type": "string"
                             }
                           }
                         }
@@ -378,39 +395,52 @@
       },
       {
         "name": "Configuration Management API",
-        "description": "Manage AI model configurations and extraction settings",
+        "description": "Manage AI extraction configurations",
         "files": [
           "server/routes.ts",
-          "server/storage.ts"
+          "server/storage.ts",
+          "shared/schema.ts"
         ],
         "api_doc": {
-          "paths": {
+          "get": {
             "/api/configs": {
-              "get": {
-                "summary": "Get AI Configurations",
-                "description": "Retrieve AI model configurations",
-                "responses": {
-                  "200": {
-                    "description": "List of configurations",
-                    "content": {
-                      "application/json": {
-                        "schema": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "id": {
+              "summary": "Get all extraction configurations",
+              "responses": {
+                "200": {
+                  "description": "List of configurations",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "selectedModels": {
+                              "type": "array",
+                              "items": {
                                 "type": "string"
-                              },
-                              "selectedModels": {
-                                "type": "array",
-                                "items": {
-                                  "type": "string"
-                                }
-                              },
-                              "isDefault": {
-                                "type": "boolean"
                               }
+                            },
+                            "selectedFields": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "customPrompts": {
+                              "type": "object"
+                            },
+                            "isDefault": {
+                              "type": "boolean"
+                            },
+                            "createdAt": {
+                              "type": "string"
                             }
                           }
                         }
@@ -418,34 +448,78 @@
                     }
                   }
                 }
-              },
-              "post": {
-                "summary": "Create AI Configuration",
-                "description": "Create new AI model configuration",
-                "requestBody": {
-                  "content": {
-                    "application/json": {
-                      "schema": {
-                        "type": "object",
-                        "properties": {
-                          "selectedModels": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
-                          },
-                          "isDefault": {
-                            "type": "boolean"
+              }
+            }
+          },
+          "post": {
+            "/api/configs": {
+              "summary": "Create new extraction configuration",
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object",
+                      "required": [
+                        "name",
+                        "selectedModels",
+                        "selectedFields"
+                      ],
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "selectedModels": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
                           }
+                        },
+                        "selectedFields": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "customPrompts": {
+                          "type": "object"
+                        },
+                        "isDefault": {
+                          "type": "boolean"
                         }
                       }
                     }
                   }
+                }
+              },
+              "responses": {
+                "201": {
+                  "description": "Configuration created successfully"
                 },
-                "responses": {
-                  "201": {
-                    "description": "Configuration created successfully"
+                "400": {
+                  "description": "Invalid configuration data"
+                }
+              }
+            }
+          },
+          "put": {
+            "/api/configs/{id}": {
+              "summary": "Update extraction configuration",
+              "parameters": [
+                {
+                  "name": "id",
+                  "in": "path",
+                  "required": true,
+                  "schema": {
+                    "type": "string"
                   }
+                }
+              ],
+              "responses": {
+                "200": {
+                  "description": "Configuration updated successfully"
+                },
+                "404": {
+                  "description": "Configuration not found"
                 }
               }
             }
@@ -456,40 +530,36 @@
         "name": "Data Export API",
         "description": "Export prescription data in CSV and JSON formats",
         "files": [
-          "server/routes.ts"
+          "server/routes.ts",
+          "server/storage.ts"
         ],
         "api_doc": {
-          "paths": {
+          "get": {
             "/api/export/csv": {
-              "get": {
-                "summary": "Export Data as CSV",
-                "description": "Export prescription data in CSV format",
-                "parameters": [
-                  {
-                    "name": "prescriptionId",
-                    "in": "query",
-                    "required": false,
-                    "schema": {
-                      "type": "string"
-                    }
-                  },
-                  {
-                    "name": "prescriptionIds",
-                    "in": "query",
-                    "required": false,
-                    "schema": {
-                      "type": "string"
-                    }
+              "summary": "Export prescriptions as CSV",
+              "parameters": [
+                {
+                  "name": "prescriptionId",
+                  "in": "query",
+                  "schema": {
+                    "type": "string"
                   }
-                ],
-                "responses": {
-                  "200": {
-                    "description": "CSV file download",
-                    "content": {
-                      "text/csv": {
-                        "schema": {
-                          "type": "string"
-                        }
+                },
+                {
+                  "name": "prescriptionIds",
+                  "in": "query",
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              ],
+              "responses": {
+                "200": {
+                  "description": "CSV file download",
+                  "content": {
+                    "text/csv": {
+                      "schema": {
+                        "type": "string"
                       }
                     }
                   }
@@ -497,36 +567,39 @@
               }
             },
             "/api/export/json": {
-              "get": {
-                "summary": "Export Data as JSON",
-                "description": "Export prescription data in JSON format",
-                "parameters": [
-                  {
-                    "name": "prescriptionId",
-                    "in": "query",
-                    "required": false,
-                    "schema": {
-                      "type": "string"
-                    }
-                  },
-                  {
-                    "name": "prescriptionIds",
-                    "in": "query",
-                    "required": false,
-                    "schema": {
-                      "type": "string"
-                    }
+              "summary": "Export prescriptions as JSON",
+              "parameters": [
+                {
+                  "name": "prescriptionId",
+                  "in": "query",
+                  "schema": {
+                    "type": "string"
                   }
-                ],
-                "responses": {
-                  "200": {
-                    "description": "JSON data export",
-                    "content": {
-                      "application/json": {
-                        "schema": {
-                          "type": "array",
-                          "items": {
-                            "type": "object"
+                },
+                {
+                  "name": "prescriptionIds",
+                  "in": "query",
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              ],
+              "responses": {
+                "200": {
+                  "description": "JSON data export",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "prescriptions": {
+                            "type": "array"
+                          },
+                          "extractionResults": {
+                            "type": "array"
+                          },
+                          "exportedAt": {
+                            "type": "string"
                           }
                         }
                       }

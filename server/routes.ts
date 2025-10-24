@@ -51,6 +51,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Error handling middleware for multer
   app.use((error: any, req: any, res: any, next: any) => {
+    console.error("Multer error:", error);
     if (error instanceof multer.MulterError) {
       if (error.code === 'LIMIT_FILE_SIZE') {
         return res.status(400).json({ error: 'File too large. Maximum size is 10MB.' });
@@ -58,7 +59,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error.code === 'LIMIT_UNEXPECTED_FILE') {
         return res.status(400).json({ error: 'Unexpected field. Please check the field name.' });
       }
+      if (error.code === 'LIMIT_FILE_COUNT') {
+        return res.status(400).json({ error: 'Too many files. Maximum is 50 files.' });
+      }
       return res.status(400).json({ error: `Upload error: ${error.message}` });
+    }
+    if (error.message && error.message.includes('Invalid file type')) {
+      return res.status(400).json({ error: error.message });
     }
     next(error);
   });
@@ -188,35 +195,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Upload prescription files
   app.post("/api/prescriptions/upload", upload.array('files', 50), async (req, res) => {
     try {
+      console.log("Upload endpoint called");
+      console.log("Files received:", req.files);
+      console.log("Request body:", req.body);
+      
       const files = req.files as Express.Multer.File[];
-      if (!files || !Array.isArray(files)) {
+      if (!files || !Array.isArray(files) || files.length === 0) {
+        console.log("No files received");
         return res.status(400).json({ error: "No files uploaded" });
       }
 
+      console.log(`Processing ${files.length} files`);
       const prescriptions = [];
 
       for (const file of files) {
-        // Process and store image data immediately
-        const processedImage = await sharp(file.buffer)
-          .jpeg({ quality: 90 })
-          .toBuffer();
-        const base64Image = processedImage.toString('base64');
+        try {
+          console.log(`Processing file: ${file.originalname}, size: ${file.size} bytes`);
+          
+          // Validate file buffer
+          if (!file.buffer || file.buffer.length === 0) {
+            console.error(`Empty buffer for file: ${file.originalname}`);
+            continue;
+          }
 
-        const prescription = await storage.createPrescription({
-          fileName: file.originalname,
-          fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-          processingStatus: "queued",
-          extractedData: null,
-          imageData: base64Image,
-        });
+          // Process and store image data immediately
+          const processedImage = await sharp(file.buffer)
+            .jpeg({ quality: 90 })
+            .toBuffer();
+          const base64Image = processedImage.toString('base64');
 
-        prescriptions.push(prescription);
+          console.log(`Creating prescription for: ${file.originalname}`);
+          const prescription = await storage.createPrescription({
+            fileName: file.originalname,
+            fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+            processingStatus: "queued",
+            extractedData: null,
+            imageData: base64Image,
+          });
+
+          console.log(`Created prescription with ID: ${prescription.id}`);
+          prescriptions.push(prescription);
+        } catch (fileError) {
+          console.error(`Error processing file ${file.originalname}:`, fileError);
+          // Continue with other files even if one fails
+        }
       }
 
+      if (prescriptions.length === 0) {
+        return res.status(400).json({ error: "No files could be processed" });
+      }
+
+      console.log(`Successfully processed ${prescriptions.length} files`);
       res.json({ prescriptions, message: "Files uploaded successfully" });
     } catch (error) {
       console.error("Error uploading files:", error);
-      res.status(500).json({ error: "Failed to upload files" });
+      res.status(500).json({ error: "Failed to upload files", details: error.message });
     }
   });
 
@@ -539,12 +572,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create extraction configuration
   app.post("/api/configs", async (req, res) => {
     try {
+      console.log("Creating config with data:", req.body);
+      
+      // Validate required fields
+      if (!req.body.name) {
+        return res.status(400).json({ error: "Configuration name is required" });
+      }
+      
+      if (!req.body.selectedModels || !Array.isArray(req.body.selectedModels)) {
+        return res.status(400).json({ error: "selectedModels must be an array" });
+      }
+      
+      if (!req.body.selectedFields || !Array.isArray(req.body.selectedFields)) {
+        return res.status(400).json({ error: "selectedFields must be an array" });
+      }
+      
       const validatedData = insertExtractionConfigSchema.parse(req.body);
+      console.log("Validated data:", validatedData);
+      
       const config = await storage.createExtractionConfig(validatedData);
+      console.log("Created config:", config);
+      
       res.status(201).json(config);
     } catch (error) {
       console.error("Error creating config:", error);
-      res.status(400).json({ error: "Invalid configuration data" });
+      if (error instanceof Error) {
+        res.status(400).json({ error: `Invalid configuration data: ${error.message}` });
+      } else {
+        res.status(400).json({ error: "Invalid configuration data" });
+      }
     }
   });
 

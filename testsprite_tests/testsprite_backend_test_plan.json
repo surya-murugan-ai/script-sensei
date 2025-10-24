@@ -1,52 +1,52 @@
 [
   {
     "id": "TC001",
-    "title": "health check api returns application status",
-    "description": "Verify that the /api/health GET endpoint returns the application health status with status, timestamp, and uptime fields correctly."
+    "title": "health check endpoint returns application status uptime",
+    "description": "Verify that the GET /api/health endpoint returns a 200 status with a JSON object containing the application status, current timestamp, and uptime in seconds."
   },
   {
     "id": "TC002",
-    "title": "get all prescriptions returns prescription list",
-    "description": "Test the /api/prescriptions GET endpoint to ensure it returns a list of all prescription records with id, processingStatus, and createdAt fields."
+    "title": "upload prescription files with validation and unique identification",
+    "description": "Test the POST /api/prescriptions/upload endpoint to ensure it accepts multiple prescription image files, validates file types and sizes, optimizes images, assigns unique identifiers, and returns a success message with uploaded prescription details."
   },
   {
     "id": "TC003",
-    "title": "upload prescription images accepts multiple files",
-    "description": "Validate the /api/prescriptions/upload POST endpoint to accept multiple prescription image files, validate file types and sizes, and return uploaded prescription IDs."
+    "title": "retrieve all prescriptions with correct data structure",
+    "description": "Verify that the GET /api/prescriptions endpoint returns a 200 status with a list of prescriptions, each containing id, fileName, fileSize, uploadedAt, createdAt, processingStatus, extractedData, and imageData fields."
   },
   {
     "id": "TC004",
-    "title": "get prescription by id returns prescription details",
-    "description": "Test the /api/prescriptions/{id} GET endpoint to retrieve a specific prescription by ID including processingStatus and extractedData."
+    "title": "retrieve prescription by id with extraction results",
+    "description": "Test the GET /api/prescriptions/{id} endpoint to return the prescription details including extraction results for a valid id, and return 404 for an invalid or non-existent id."
   },
   {
     "id": "TC005",
-    "title": "delete prescription supports force delete option",
-    "description": "Verify the /api/prescriptions/{id} DELETE endpoint deletes a prescription record and supports an optional force delete query parameter."
+    "title": "delete prescription with force parameter handling",
+    "description": "Verify DELETE /api/prescriptions/{id} endpoint deletes a prescription successfully when allowed, returns 400 if force parameter is missing for completed prescriptions, and returns 404 if the prescription id does not exist."
   },
   {
     "id": "TC006",
-    "title": "process prescription with ai returns extracted data",
-    "description": "Test the /api/prescriptions/{id}/process POST endpoint to process a prescription image using AI models and return extracted data in the response."
+    "title": "process prescription with selected ai models and custom prompts",
+    "description": "Test POST /api/prescriptions/{id}/process endpoint to process a prescription image using selected AI models and custom prompts, ensuring parallel processing, correct handling of missing image data (400), non-existent prescription (404), and successful processing (200)."
   },
   {
     "id": "TC007",
-    "title": "get all extraction results returns ai extraction data",
-    "description": "Validate the /api/extraction-results GET endpoint returns a list of AI extraction results including id, model, and extractedData fields."
+    "title": "process existing prescription without file upload",
+    "description": "Verify POST /api/prescriptions/{id}/process-existing endpoint processes an existing prescription without requiring file upload, returns 400 if no image data is available, 404 if prescription not found, and 200 on successful processing."
   },
   {
     "id": "TC008",
-    "title": "get ai configurations returns configuration list",
-    "description": "Test the /api/configs GET endpoint to retrieve all AI model configurations including selectedModels and isDefault flags."
+    "title": "get all extraction results with correct schema",
+    "description": "Test GET /api/extraction-results endpoint to return a list of extraction results with fields including id, prescriptionId, modelName, fieldName, extractedValue, confidence, processingTime, and createdAt."
   },
   {
     "id": "TC009",
-    "title": "create ai configuration stores new configuration",
-    "description": "Verify the /api/configs POST endpoint creates a new AI model configuration with selectedModels and isDefault properties and returns success status."
+    "title": "manage extraction configurations crud operations",
+    "description": "Verify the Configuration Management API endpoints: GET /api/configs returns all configurations, POST /api/configs creates new configurations with validation, and PUT /api/configs/{id} updates existing configurations or returns 404 if not found."
   },
   {
     "id": "TC010",
-    "title": "export prescription data as csv file",
-    "description": "Test the /api/export/csv GET endpoint to export prescription data in CSV format based on optional prescriptionId or prescriptionIds query parameters and verify the CSV file download."
+    "title": "export prescription data in csv and json formats",
+    "description": "Test GET /api/export/csv and GET /api/export/json endpoints to export prescription data by single or multiple prescription IDs, ensuring correct file format, content type, and data accuracy in the exported files."
   }
 ]

@@ -71,7 +71,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPrescription(insertPrescription: InsertPrescription): Promise<Prescription> {
-    const [prescription] = await db.insert(prescriptions).values(insertPrescription).returning();
+    const [prescription] = await db.insert(prescriptions).values({
+      ...insertPrescription,
+      createdAt: new Date(), // Ensure createdAt is set
+    }).returning();
     return prescription;
   }
 

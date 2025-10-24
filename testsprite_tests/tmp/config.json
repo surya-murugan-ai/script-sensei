@@ -2,16 +2,16 @@
   "status": "commited",
   "type": "backend",
   "scope": "codebase",
-  "localEndpoint": "http://localhost:3000",
+  "localEndpoint": "http://localhost:5000",
   "backendAuthType": "public",
   "executionArgs": {
     "projectName": "ScriptSensei",
     "projectPath": "C:\\Users\\Administrator\\Desktop\\aimplify project\\ScriptSensei",
     "testIds": [],
-    "additionalInstruction": "Focus on testing the prescription upload and processing functionality, including the AI model integration and database operations. Pay special attention to the database persistence issues we've been experiencing.",
+    "additionalInstruction": "Test the fixes for database schema, file upload, and configuration validation issues. Focus on verifying that the createdAt field is present, file uploads work without 500 errors, and AI configuration creation works properly.",
     "envs": {
       "API_KEY": "sk-user-Dsi2x5RSdNg6xquoKnC8jNRnXX9RRZVnMYpQ2jjrPPNoNIh_wIuGYKwMd6XACgrE2AGh8kJjVffu__KJg1L2aOxbz4uect0GfJfIvrQMEiadoJ1S3d0zq8Wxaq8OigVgXV8"
     }
   },
-  "proxy": "http://cf6411f3-1f9b-4c35-a885-aeb33e2aa536:mEC2weWUODIOXZNelAANQDssMs5qAFVB@tun.testsprite.com:8080"
+  "proxy": "http://a408b80b-a10a-4b2d-93fb-58701cd1cc97:oXvv102xb31bebxfVuDQb6zQ8gD2lvba@tun.testsprite.com:8080"
 }

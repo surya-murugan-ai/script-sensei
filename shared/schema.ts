@@ -59,6 +59,7 @@ export const prescriptions = pgTable("prescriptions", {
   fileName: text("file_name").notNull(),
   fileSize: text("file_size").notNull(),
   uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(), // Add createdAt field for compatibility
   processingStatus: text("processing_status").notNull().default("queued"), // queued, processing, completed, failed
   extractedData: jsonb("extracted_data"),
   imageData: text("image_data"), // base64 encoded image for display
