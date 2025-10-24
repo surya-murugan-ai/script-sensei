@@ -1,4 +1,4 @@
-# 🚀 ScriptSensei Deployment Summary
+# 🚀 ScriptSensei Deployment Summary 
 
 ## ✅ What's Ready
 
