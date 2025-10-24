@@ -1,0 +1,408 @@
+[
+  {
+    "id": "TC001",
+    "title": "Upload valid prescription images",
+    "description": "Verify that users can upload multiple valid prescription image files successfully via drag-and-drop interface with correct validations and receive unique IDs.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the prescription upload page."
+      },
+      {
+        "type": "action",
+        "description": "Drag and drop multiple valid prescription image files with accepted MIME types and sizes."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that files are validated successfully for type and size."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify upload success response with a list of unique prescription IDs."
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Reject invalid file types and oversize files on upload",
+    "description": "Ensure the upload interface rejects files with invalid MIME types or exceeding size limits with appropriate error messages.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the prescription upload page."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to upload files with unsupported MIME types."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation error message indicating invalid file types."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to upload files exceeding maximum allowed size."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation error message indicating file size is too large."
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Prescription image optimization and unique ID generation",
+    "description": "Verify that uploaded prescription images are optimized for processing using Sharp and uniquely identified before storage.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Upload valid prescription images."
+      },
+      {
+        "type": "assertion",
+        "description": "Check that images have been optimized (e.g., resized, compressed) as per specs."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify unique identifier is assigned to each uploaded prescription image."
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Add prescriptions to processing queue with correct initial status",
+    "description": "Ensure newly uploaded prescriptions enter the processing queue with a status of 'queued' and are visible with real-time status updates.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Upload multiple prescription images."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that the processing queue shows each uploaded prescription with status 'queued'."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify real-time updates change statuses from 'queued' to 'processing' then 'completed' or 'failed'."
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Parallel AI model processing of prescriptions",
+    "description": "Validate that each prescription is sent in parallel to OpenAI GPT-4V, Anthropic Claude, and Google Gemini AI models and receives extraction results from all models.",
+    "category": "integration",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Trigger processing of one or multiple prescriptions."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that requests are sent simultaneously to all selected AI models."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify extraction results are returned from each AI model."
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Extraction results conformity to predefined schema",
+    "description": "Ensure extraction results conform to the defined schema for patient, medication, investigations, and doctor details from each AI model.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Process prescription through AI models."
+      },
+      {
+        "type": "assertion",
+        "description": "Validate each extraction result matches the expected schema structure and data types."
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Editable extraction results UI interaction",
+    "description": "Check that users can view extraction results in the front-end component, make updates or corrections, and that changes persist correctly.",
+    "category": "ui",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open a processed prescription with extraction results."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify extraction data fields are editable in the UI."
+      },
+      {
+        "type": "action",
+        "description": "Modify some extracted data fields."
+      },
+      {
+        "type": "action",
+        "description": "Save the changes."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm that updated extraction results are persisted and retrievable via API."
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Retrieve all prescriptions via API",
+    "description": "Verify the API to fetch all prescriptions returns correct and complete data including their statuses and metadata.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Send GET request to /api/prescriptions endpoint."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify response status is 200 OK."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify response data is an array containing prescription objects with id, processingStatus, and createdAt."
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Retrieve specific prescription by ID",
+    "description": "Ensure the API returns correct prescription details including extracted data for a valid ID, and proper error for invalid ID.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Send GET request to /api/prescriptions/{id} with valid prescription ID."
+      },
+      {
+        "type": "assertion",
+        "description": "Response status is 200 and contains prescription details with extractedData."
+      },
+      {
+        "type": "action",
+        "description": "Send GET request to /api/prescriptions/{id} with invalid/non-existent ID."
+      },
+      {
+        "type": "assertion",
+        "description": "Response returns 404 Not Found or appropriate error message."
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Delete prescription and force delete",
+    "description": "Verify the deletion API removes prescription records and supports force delete query parameter behaving accordingly.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Send DELETE request to /api/prescriptions/{id} without force parameter."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify prescription is deleted successfully and confirmation response received."
+      },
+      {
+        "type": "action",
+        "description": "Send DELETE request with force=true query parameter to delete locked/in-use prescription."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify prescription forced deletion succeeds with confirmation."
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Handle errors gracefully on API endpoints",
+    "description": "Check that all APIs return appropriate HTTP status codes and error messages for invalid input or server problems.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Send malformed request to /api/prescriptions/upload."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify 400 Bad Request returned with descriptive error message."
+      },
+      {
+        "type": "action",
+        "description": "Send request to non-existent endpoint."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify 404 Not Found returned."
+      },
+      {
+        "type": "action",
+        "description": "Simulate server error during processing."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify 500 Internal Server Error returned with clear message."
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Manage AI extraction configuration CRUD operations",
+    "description": "Test creating, retrieving, updating, and deleting AI extraction configurations with selected models and default settings.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Send GET request to /api/configs to retrieve all configurations."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify response contains an array of configurations with correct properties."
+      },
+      {
+        "type": "action",
+        "description": "Send POST request to /api/configs to create new configuration with selectedModels and isDefault."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify 201 Created response and configuration is stored."
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Configure extraction prompts and verify behavior",
+    "description": "Ensure changes to AI model extraction prompts and parameters via configurations are respected during processing.",
+    "category": "integration",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Create or update AI extraction config with custom prompts and model preferences."
+      },
+      {
+        "type": "action",
+        "description": "Process prescription using updated configuration."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify AI processing applies new prompts and model selection accordingly."
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Export prescription data as CSV",
+    "description": "Verify that selected prescription data can be exported and downloaded in correctly formatted CSV files.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Send GET request to /api/export/csv with valid prescriptionId or prescriptionIds query."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify response status 200 and content type text/csv."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify CSV content matches prescription data accurately."
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "Export prescription data as JSON",
+    "description": "Check that selection of prescriptions can be exported as valid JSON data matching schema.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Send GET request to /api/export/json with valid prescriptionId or prescriptionIds query."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify response status 200 with application/json content type."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify JSON data matches corresponding prescription records."
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "Processing queue real-time status update in UI",
+    "description": "Test that the front-end accurately displays real-time updates of prescription processing statuses (queued, processing, completed, failed).",
+    "category": "ui",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Upload prescriptions and observe processing queue."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify status changes from queued to processing then completed or failed are reflected live in UI."
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "Backend secure handling of uploaded images using Multer and validation",
+    "description": "Ensure that Multer middleware correctly handles file uploads securely, saving only allowed file types and rejects invalid uploads.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Attempt uploading both valid and invalid file types through API."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify only valid files accepted and stored securely while invalid rejected."
+      }
+    ]
+  },
+  {
+    "id": "TC018",
+    "title": "System health check endpoint",
+    "description": "Verify that the health check API endpoint returns current health status with timestamp and uptime information.",
+    "category": "functional",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Send GET request to /api/health."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify response status 200 with JSON containing status='healthy', timestamp, and uptime."
+      }
+    ]
+  }
+]

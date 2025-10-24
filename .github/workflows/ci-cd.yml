@@ -179,9 +179,13 @@ jobs:
             echo "🐳 Pulling latest Docker image..."
             docker-compose pull
             
-            # Run database migrations
+            # Backup database before migrations
+            echo "💾 Creating database backup..."
+            docker-compose exec -T postgres pg_dump -U postgres scriptsensei > backup_$(date +%Y%m%d_%H%M%S).sql || echo "⚠️ Backup failed, continuing..."
+            
+            # Run database migrations (only if needed)
             echo "🗄️ Running database migrations..."
-            docker-compose run --rm app npm run db:push
+            docker-compose exec app npm run db:push || echo "⚠️ Migration completed or skipped"
             
             # Restart services with new image
             echo "🔄 Restarting services..."

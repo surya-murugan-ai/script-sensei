@@ -1,0 +1,527 @@
+{
+  "meta": {
+    "project": "MedExtract AI",
+    "date": "2025-10-20",
+    "prepared_by": "Software Development Manager"
+  },
+  "product_overview": "MedExtract AI is a comprehensive full-stack platform designed to extract and analyze structured data from handwritten prescription images using advanced AI models including OpenAI GPT-4V, Anthropic Claude, and Google Gemini. It offers features for upload, processing, multi-model consensus, configuration management, and data export to facilitate accurate and efficient prescription data handling.",
+  "core_goals": [
+    "Enable users to upload and securely manage handwritten prescription images.",
+    "Leverage multiple AI models in parallel to extract detailed prescription information with high accuracy.",
+    "Provide configuration options for AI extraction prompts and model preferences to customize processing.",
+    "Present extraction results in an editable format for review and correction by users.",
+    "Maintain a processing queue that tracks prescription statuses through their lifecycle.",
+    "Facilitate export of processed data in CSV and JSON formats for external use.",
+    "Ensure robust validation, error handling, and secure file management throughout the system."
+  ],
+  "key_features": [
+    "Drag-and-drop file upload interface with file type and size validation.",
+    "Support for uploading multiple prescriptions simultaneously with progress feedback.",
+    "Parallel processing of prescriptions using OpenAI GPT-4V, Anthropic Claude, and Google Gemini AI models.",
+    "Configurable extraction prompts and AI model parameters to optimize data extraction quality.",
+    "Management APIs for CRUD operations on prescriptions and extraction configurations.",
+    "Real-time display and management of processing queue and prescription statuses.",
+    "Editable extraction results component allowing users to review and update extracted data fields.",
+    "Data export endpoints supporting CSV and JSON formats for prescription data.",
+    "Backend image processing with Sharp and secure handling with Multer middleware.",
+    "In-memory storage for initial deployment with planned database migration using PostgreSQL and Drizzle ORM."
+  ],
+  "user_flow_summary": [
+    "User accesses the application and uploads prescription images via a drag-and-drop interface supporting multiple files.",
+    "The system validates and optimizes the images before storing them with unique identifiers.",
+    "Uploaded prescriptions enter a processing queue with visible status updates (queued, processing, completed, failed).",
+    "The system sends each prescription in parallel to configured AI models (OpenAI, Claude, Gemini) for data extraction using user-configured prompts where applicable.",
+    "Extraction results from each AI model are aggregated and presented for user review in an editable format.",
+    "Users can update or correct the extracted prescription data as needed.",
+    "Users manage extraction configurations to tweak AI model parameters and prompts through dedicated interfaces.",
+    "Users export selected prescription data via API endpoints in CSV or JSON format for external reporting or integration.",
+    "Administrators or users can retrieve, delete, or force delete prescriptions through management APIs."
+  ],
+  "validation_criteria": [
+    "Uploaded files are validated for accepted MIME types and size before processing.",
+    "Prescription images are optimized and uniquely identified upon upload.",
+    "Prescriptions move through processing statuses correctly and in real-time.",
+    "All configured AI models process the prescriptions in parallel and return extraction results.",
+    "Extraction results are consistent with the predefined schema for patient, medication, investigations, and doctor details.",
+    "Users can successfully update extraction results and changes are persisted.",
+    "Data exports correctly reflect selected prescription IDs and formats (CSV/JSON) are valid and downloadable.",
+    "API endpoints handle errors gracefully with clear messages and appropriate HTTP status codes.",
+    "Configuration changes for AI models and prompts are stored and retrieved accurately.",
+    "Frontend components display current statuses and data accurately and allow user interactions as designed."
+  ],
+  "code_summary": {
+    "tech_stack": [
+      "TypeScript",
+      "React",
+      "Express.js",
+      "PostgreSQL",
+      "Drizzle ORM",
+      "Vite",
+      "Tailwind CSS",
+      "OpenAI",
+      "Anthropic Claude",
+      "Google Gemini",
+      "Sharp",
+      "Multer",
+      "Docker"
+    ],
+    "features": [
+      {
+        "name": "Prescription Upload API",
+        "description": "Upload and process prescription images with file validation and image optimization",
+        "files": [
+          "server/routes.ts"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "info": {
+            "title": "Prescription Upload API",
+            "version": "1.0.0"
+          },
+          "paths": {
+            "/api/prescriptions/upload": {
+              "post": {
+                "summary": "Upload prescription files",
+                "requestBody": {
+                  "content": {
+                    "multipart/form-data": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "files": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "format": "binary"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "responses": {
+                  "200": {
+                    "description": "Files uploaded successfully",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "type": "object",
+                          "properties": {
+                            "prescriptions": {
+                              "type": "array",
+                              "items": {
+                                "type": "object"
+                              }
+                            },
+                            "message": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "AI Prescription Processing API",
+        "description": "Process prescription images using multiple AI models (OpenAI, Claude, Gemini) for data extraction",
+        "files": [
+          "server/routes.ts",
+          "server/aiServices.ts"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "info": {
+            "title": "AI Prescription Processing API",
+            "version": "1.0.0"
+          },
+          "paths": {
+            "/api/prescriptions/{id}/process": {
+              "post": {
+                "summary": "Process prescription with AI models",
+                "parameters": [
+                  {
+                    "name": "id",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                      "type": "string"
+                    }
+                  }
+                ],
+                "requestBody": {
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "selectedModels": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "customPrompts": {
+                            "type": "object"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "responses": {
+                  "200": {
+                    "description": "Processing completed",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "type": "object",
+                          "properties": {
+                            "message": {
+                              "type": "string"
+                            },
+                            "results": {
+                              "type": "array"
+                            },
+                            "finalData": {
+                              "type": "object"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Prescription Management API",
+        "description": "CRUD operations for prescriptions including retrieval, deletion, and status updates",
+        "files": [
+          "server/routes.ts"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "info": {
+            "title": "Prescription Management API",
+            "version": "1.0.0"
+          },
+          "paths": {
+            "/api/prescriptions": {
+              "get": {
+                "summary": "Get all prescriptions",
+                "responses": {
+                  "200": {
+                    "description": "List of prescriptions",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "/api/prescriptions/{id}": {
+              "get": {
+                "summary": "Get single prescription with extraction results",
+                "parameters": [
+                  {
+                    "name": "id",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                      "type": "string"
+                    }
+                  }
+                ],
+                "responses": {
+                  "200": {
+                    "description": "Prescription details with extraction results",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "type": "object",
+                          "properties": {
+                            "prescription": {
+                              "type": "object"
+                            },
+                            "extractionResults": {
+                              "type": "array"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "delete": {
+                "summary": "Delete prescription",
+                "parameters": [
+                  {
+                    "name": "id",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "name": "force",
+                    "in": "query",
+                    "schema": {
+                      "type": "boolean"
+                    }
+                  }
+                ],
+                "responses": {
+                  "200": {
+                    "description": "Prescription deleted successfully"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Data Export API",
+        "description": "Export prescription data in CSV and JSON formats",
+        "files": [
+          "server/routes.ts"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "info": {
+            "title": "Data Export API",
+            "version": "1.0.0"
+          },
+          "paths": {
+            "/api/export/csv": {
+              "get": {
+                "summary": "Export prescriptions as CSV",
+                "parameters": [
+                  {
+                    "name": "prescriptionIds",
+                    "in": "query",
+                    "schema": {
+                      "type": "string"
+                    }
+                  }
+                ],
+                "responses": {
+                  "200": {
+                    "description": "CSV file download",
+                    "content": {
+                      "text/csv": {
+                        "schema": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "/api/export/json": {
+              "get": {
+                "summary": "Export prescriptions as JSON",
+                "parameters": [
+                  {
+                    "name": "prescriptionIds",
+                    "in": "query",
+                    "schema": {
+                      "type": "string"
+                    }
+                  }
+                ],
+                "responses": {
+                  "200": {
+                    "description": "JSON file download",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Configuration Management API",
+        "description": "Manage AI model configurations and extraction prompts",
+        "files": [
+          "server/routes.ts"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "info": {
+            "title": "Configuration Management API",
+            "version": "1.0.0"
+          },
+          "paths": {
+            "/api/configs": {
+              "get": {
+                "summary": "Get extraction configurations",
+                "responses": {
+                  "200": {
+                    "description": "List of configurations",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "post": {
+                "summary": "Create extraction configuration",
+                "requestBody": {
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                },
+                "responses": {
+                  "201": {
+                    "description": "Configuration created successfully"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "File Upload Component",
+        "description": "React component for drag-and-drop file upload with progress tracking",
+        "files": [
+          "client/src/components/FileUpload.tsx"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "info": {
+            "title": "File Upload Component",
+            "version": "1.0.0"
+          },
+          "components": {
+            "schemas": {
+              "FileUploadProps": {
+                "type": "object",
+                "properties": {
+                  "onUploadComplete": {
+                    "type": "function"
+                  },
+                  "maxFiles": {
+                    "type": "number"
+                  },
+                  "acceptedFileTypes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Processing Queue Component",
+        "description": "React component for displaying and managing prescription processing status",
+        "files": [
+          "client/src/components/ProcessingQueue.tsx"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "info": {
+            "title": "Processing Queue Component",
+            "version": "1.0.0"
+          },
+          "components": {
+            "schemas": {
+              "ProcessingQueueProps": {
+                "type": "object",
+                "properties": {
+                  "prescriptions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    }
+                  },
+                  "onRetry": {
+                    "type": "function"
+                  },
+                  "onDelete": {
+                    "type": "function"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Extraction Results Component",
+        "description": "React component for displaying and editing extracted prescription data",
+        "files": [
+          "client/src/components/ExtractionResults.tsx"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "info": {
+            "title": "Extraction Results Component",
+            "version": "1.0.0"
+          },
+          "components": {
+            "schemas": {
+              "ExtractionResultsProps": {
+                "type": "object",
+                "properties": {
+                  "extractionResults": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    }
+                  },
+                  "onUpdate": {
+                    "type": "function"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}

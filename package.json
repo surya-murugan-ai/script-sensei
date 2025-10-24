@@ -14,7 +14,10 @@
     "docker:dev": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f app",
-    "docker:rebuild": "docker-compose up -d --build"
+    "docker:rebuild": "docker-compose up -d --build",
+    "db:backup": "chmod +x scripts/backup-db.sh && ./scripts/backup-db.sh",
+    "db:restore": "chmod +x scripts/restore-db.sh && ./scripts/restore-db.sh",
+    "db:monitor": "chmod +x scripts/monitor-db.sh && ./scripts/monitor-db.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",

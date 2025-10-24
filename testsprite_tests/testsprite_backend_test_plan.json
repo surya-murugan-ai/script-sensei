@@ -1,0 +1,52 @@
+[
+  {
+    "id": "TC001",
+    "title": "health check api returns application status",
+    "description": "Verify that the /api/health GET endpoint returns the application health status with status, timestamp, and uptime fields correctly."
+  },
+  {
+    "id": "TC002",
+    "title": "get all prescriptions returns prescription list",
+    "description": "Test the /api/prescriptions GET endpoint to ensure it returns a list of all prescription records with id, processingStatus, and createdAt fields."
+  },
+  {
+    "id": "TC003",
+    "title": "upload prescription images accepts multiple files",
+    "description": "Validate the /api/prescriptions/upload POST endpoint to accept multiple prescription image files, validate file types and sizes, and return uploaded prescription IDs."
+  },
+  {
+    "id": "TC004",
+    "title": "get prescription by id returns prescription details",
+    "description": "Test the /api/prescriptions/{id} GET endpoint to retrieve a specific prescription by ID including processingStatus and extractedData."
+  },
+  {
+    "id": "TC005",
+    "title": "delete prescription supports force delete option",
+    "description": "Verify the /api/prescriptions/{id} DELETE endpoint deletes a prescription record and supports an optional force delete query parameter."
+  },
+  {
+    "id": "TC006",
+    "title": "process prescription with ai returns extracted data",
+    "description": "Test the /api/prescriptions/{id}/process POST endpoint to process a prescription image using AI models and return extracted data in the response."
+  },
+  {
+    "id": "TC007",
+    "title": "get all extraction results returns ai extraction data",
+    "description": "Validate the /api/extraction-results GET endpoint returns a list of AI extraction results including id, model, and extractedData fields."
+  },
+  {
+    "id": "TC008",
+    "title": "get ai configurations returns configuration list",
+    "description": "Test the /api/configs GET endpoint to retrieve all AI model configurations including selectedModels and isDefault flags."
+  },
+  {
+    "id": "TC009",
+    "title": "create ai configuration stores new configuration",
+    "description": "Verify the /api/configs POST endpoint creates a new AI model configuration with selectedModels and isDefault properties and returns success status."
+  },
+  {
+    "id": "TC010",
+    "title": "export prescription data as csv file",
+    "description": "Test the /api/export/csv GET endpoint to export prescription data in CSV format based on optional prescriptionId or prescriptionIds query parameters and verify the CSV file download."
+  }
+]
