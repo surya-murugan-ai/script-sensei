@@ -54,8 +54,8 @@ services:
       start_period: 40s
     networks:
       - scriptsensei-network
-    # Automatically run database migrations on startup
-    command: sh -c "npm run db:push && node dist/index.js"
+    # Run database migrations only once, then start the application
+    command: sh -c "if [ ! -f /app/.db_initialized ]; then echo '🗄️ Running initial database setup...' && npm run db:push && touch /app/.db_initialized && echo '✅ Database initialized successfully'; else echo '✅ Database already initialized, skipping migrations'; fi && echo '🚀 Starting application...' && node dist/index.js"
 
 volumes:
   postgres_data:

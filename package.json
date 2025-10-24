@@ -17,7 +17,9 @@
     "docker:rebuild": "docker-compose up -d --build",
     "db:backup": "chmod +x scripts/backup-db.sh && ./scripts/backup-db.sh",
     "db:restore": "chmod +x scripts/restore-db.sh && ./scripts/restore-db.sh",
-    "db:monitor": "chmod +x scripts/monitor-db.sh && ./scripts/monitor-db.sh"
+    "db:monitor": "chmod +x scripts/monitor-db.sh && ./scripts/monitor-db.sh",
+    "db:init": "chmod +x scripts/init-db.sh && ./scripts/init-db.sh",
+    "db:health": "chmod +x scripts/check-db-health.sh && ./scripts/check-db-health.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",
