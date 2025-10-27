@@ -40,7 +40,12 @@ async function runMigrations() {
     process.exit(0);
   } catch (error) {
     console.error('❌ Migration failed:', error);
-    console.error('Error details:', error.message);
+    // Fix: Properly handle unknown error type
+    if (error instanceof Error) {
+      console.error('Error details:', error.message);
+    } else {
+      console.error('Error details:', String(error));
+    }
     process.exit(1);
   } finally {
     await pool.end();
