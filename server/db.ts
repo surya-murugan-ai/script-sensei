@@ -10,8 +10,9 @@ if (!process.env.DATABASE_URL) {
 
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  // Add connection options for better reliability
-  max: 20,
+  // Optimized connection pool settings
+  max: 10, // Reduced from 20 - sufficient for single app instance
+  min: 2, // Keep minimum connections ready
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
 });

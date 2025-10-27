@@ -42,6 +42,7 @@ COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nodejs:nodejs /app/package*.json ./
 COPY --from=builder --chown=nodejs:nodejs /app/drizzle.config.ts ./
 COPY --from=builder --chown=nodejs:nodejs /app/shared ./shared
+COPY --from=builder --chown=nodejs:nodejs /app/migrations ./migrations
 
 # Create directories for file uploads
 RUN mkdir -p /app/prescriptions /app/logs && \

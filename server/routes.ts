@@ -6,6 +6,9 @@ import { insertPrescriptionSchema, insertExtractionConfigSchema, PrescriptionDat
 import multer from "multer";
 import sharp from "sharp";
 import { parse } from "json2csv";
+import { notifyPrescriptionCreated, notifyPrescriptionUpdated, notifyPrescriptionDeleted, notifyPrescriptionStatus } from "./websocket";
+import { dbLogger } from './dbLogger';
+import { dbHealthService } from './dbHealth';
 
 // Configure multer for file uploads
 const upload = multer({
@@ -41,12 +44,57 @@ const uploadSingle = multer({
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint for Docker
-  app.get("/api/health", (_req, res) => {
-    res.status(200).json({
-      status: "healthy",
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime()
-    });
+  app.get("/api/health", async (_req, res) => {
+    try {
+      const dbHealth = await dbLogger.getDatabaseHealth();
+      const dbStats = await dbHealthService.getDatabaseStats();
+      
+      res.status(200).json({
+        status: "healthy",
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        database: {
+          status: dbHealth.status,
+          message: dbHealth.message,
+          prescriptions: dbHealth.metrics.prescriptionCount,
+          extractionResults: dbHealth.metrics.extractionResultCount,
+          databaseSize: dbHealth.metrics.databaseSize,
+          connections: `${dbHealth.metrics.totalConnections}/${dbHealth.metrics.totalConnections + dbHealth.metrics.waitingClients}`,
+          lastActivity: dbHealth.metrics.lastActivity,
+          uptime: dbHealth.metrics.uptime,
+          dataLoss: dbStats.dataLoss,
+          history: dbStats.history
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: "unhealthy",
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        error: "Database health check failed"
+      });
+    }
+  });
+
+  // Detailed database health endpoint
+  app.get("/api/db/health", async (_req, res) => {
+    try {
+      const stats = await dbHealthService.getDatabaseStats();
+      await dbHealthService.logDetailedReport();
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get database health" });
+    }
+  });
+
+  // Database health history endpoint
+  app.get("/api/db/history", (_req, res) => {
+    try {
+      const history = dbHealthService.getHealthHistory();
+      res.json({ history });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get database history" });
+    }
   });
 
   // Error handling middleware for multer
@@ -235,6 +283,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           console.log(`Created prescription with ID: ${prescription.id}`);
           prescriptions.push(prescription);
+          
+          // Log data operation
+          await dbLogger.logDataOperation('insert', 'prescriptions', 1, `Created prescription ${prescription.id}`);
+          
+          // Notify clients via WebSocket
+          notifyPrescriptionCreated(prescription.id);
         } catch (fileError) {
           console.error(`Error processing file ${file.originalname}:`, fileError);
           // Continue with other files even if one fails
@@ -283,6 +337,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update status to processing
       await storage.updatePrescription(id, { processingStatus: "processing" });
+      notifyPrescriptionStatus(id, "processing");
 
       // Parse selected models and custom prompts, fallback to default config
       let models = typeof selectedModels === 'string' ? JSON.parse(selectedModels) : selectedModels;
@@ -340,6 +395,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         extractedData: finalData,
         processingStatus: "completed"
       });
+      notifyPrescriptionStatus(id, "completed");
 
       res.json({ 
         message: "Processing completed successfully", 
@@ -357,6 +413,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update status to failed
       try {
         await storage.updatePrescription(req.params.id, { processingStatus: "failed" });
+        notifyPrescriptionStatus(req.params.id, "failed");
       } catch (updateError) {
         console.error("Error updating prescription status to failed:", updateError);
       }
@@ -462,11 +519,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         processingStatus: "completed",
         extractedData: finalData,
       });
+      notifyPrescriptionStatus(id, "completed");
 
       res.json({ message: "Processing completed", results: modelResults, finalData });
     } catch (error) {
       console.error("Error processing prescription:", error);
       await storage.updatePrescription(req.params.id, { processingStatus: "failed" });
+      notifyPrescriptionStatus(req.params.id, "failed");
       res.status(500).json({ error: "Failed to process prescription" });
     }
   });
@@ -495,6 +554,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const success = await storage.deletePrescription(id);
       
       if (success) {
+        // Log deletion with extra detail
+        await dbLogger.logDataOperation('delete', 'prescriptions', 1, `Deleted prescription ${id} (${prescription.processingStatus})`);
+        
+        notifyPrescriptionDeleted(id);
         const statusText = prescription.processingStatus === 'queued' ? 'cancelled' : 'deleted';
         res.json({ message: `Prescription ${statusText} successfully` });
       } else {
@@ -523,6 +586,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Reset status to queued for reprocessing
       await storage.updatePrescription(id, { processingStatus: 'queued' });
+      notifyPrescriptionUpdated(id, 'queued');
       
       res.json({ message: "Prescription queued for retry" });
     } catch (error) {
@@ -551,6 +615,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Reset status to queued for reprocessing
       await storage.updatePrescription(id, { processingStatus: 'queued' });
+      notifyPrescriptionUpdated(id, 'queued');
       
       res.json({ message: "Prescription queued for reprocessing with enhanced AI extraction" });
     } catch (error) {

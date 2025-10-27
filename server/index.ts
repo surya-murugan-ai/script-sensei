@@ -2,6 +2,9 @@ import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { log } from "./utils";
+import { WebSocketServer } from 'ws';
+import type { Server } from 'http';
+import { dbLogger } from './dbLogger';
 
 const app = express();
 app.use(express.json());
@@ -61,6 +64,30 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
+  // Setup WebSocket server for real-time updates
+  const wss = new WebSocketServer({ server, path: '/ws' });
+  
+  wss.on('connection', (ws) => {
+    log('WebSocket client connected');
+    
+    ws.on('error', (error) => {
+      console.error('WebSocket error:', error);
+    });
+    
+    ws.on('close', () => {
+      log('WebSocket client disconnected');
+    });
+    
+    // Send initial connection confirmation
+    ws.send(JSON.stringify({ type: 'connected', timestamp: new Date().toISOString() }));
+  });
+  
+  // Make WebSocket server available globally for broadcasting
+  (global as any).wss = wss;
+  
+  // Start database monitoring
+  dbLogger.startLogging(30000); // Log every 30 seconds
+  
   // ALWAYS serve the app on the port specified in the environment variable PORT
   // Other ports are firewalled. Default to 5000 if not specified.
   // this serves both the API and the client.
@@ -72,5 +99,7 @@ app.use((req, res, next) => {
     host,
   }, () => {
     log(`serving on ${host}:${port}`);
+    log('WebSocket server ready on /ws');
+    log('Database monitoring started');
   });
 })();

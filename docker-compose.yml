@@ -1,42 +1,16 @@
-version: '3.9'
-
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:15-alpine
-    container_name: scriptsensei-db
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: scriptsensei
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./backups:/backups
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    networks:
-      - scriptsensei-network
-
   # ScriptSensei Application
   app:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: scriptsensei-app
-    depends_on:
-      postgres:
-        condition: service_healthy
     environment:
       NODE_ENV: production
       PORT: 5000
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/scriptsensei
-      # These will be overridden by .env file or CI/CD secrets
+      # Supabase connection string from .env file
+      DATABASE_URL: ${DATABASE_URL}
+      # AI Service API Keys from .env file
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
@@ -52,14 +26,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    networks:
-      - scriptsensei-network
-    # Run database migrations only once, then start the application
-    command: sh -c "if [ ! -f /app/.db_initialized ]; then echo '🗄️ Running initial database setup...' && npm run db:push && touch /app/.db_initialized && echo '✅ Database initialized successfully'; else echo '✅ Database already initialized, skipping migrations'; fi && echo '🚀 Starting application...' && node dist/index.js"
-
-volumes:
-  postgres_data:
-    driver: local
+    # Run safe migrations (idempotent) then start the application
+    command: sh -c "echo '🗄️ Running database migrations...' && npm run db:migrate:prod && echo '✅ Migrations completed' && echo '🚀 Starting application...' && node dist/index.js"
 
 networks:
   scriptsensei-network:
