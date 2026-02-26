@@ -1,6 +1,7 @@
 services:
   # ScriptSensei Application
   app:
+    image: ghcr.io/surya-murugan-ai/script-sensei:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -10,7 +11,9 @@ services:
       PORT: 5000
       # Supabase connection string from .env file
       DATABASE_URL: ${DATABASE_URL}
-      # AI Service API Keys from .env file
+      # API Keys from .env file
+      EXTERNAL_API_KEY: ${EXTERNAL_API_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
