@@ -2,10 +2,18 @@ import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import cors from "cors";
+import { apiAuth } from "./api-auth";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Enable CORS for all origins (adjust for production as needed)
+app.use(cors());
+
+// Enable API Authentication
+app.use(apiAuth);
 
 app.use((req, res, next) => {
   const start = Date.now();

@@ -55,16 +55,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const extractionResults = await storage.getExtractionResults(req.params.id);
-      
+
       // Rebuild extractedData using the latest aggregation logic
       const aggregatedData = aggregateExtractionResults(extractionResults);
-      
+
       // Update the prescription with the freshly aggregated data
       const updatedPrescription = {
         ...prescription,
         extractedData: aggregatedData
       };
-      
+
       res.json({ prescription: updatedPrescription, extractionResults });
     } catch (error) {
       console.error("Error fetching prescription:", error);
@@ -89,7 +89,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .replace(/>/g, '&gt;')
           .replace(/"/g, '&quot;')
           .replace(/'/g, '&#39;');
-          
+
         const placeholderSvg = `
           <svg width="400" height="600" xmlns="http://www.w3.org/2000/svg">
             <rect width="100%" height="100%" fill="#f8f9fa" stroke="#dee2e6" stroke-width="2"/>
@@ -104,19 +104,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             </text>
           </svg>
         `;
-        
+
         res.set({
           'Content-Type': 'image/svg+xml',
           'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
         });
-        
+
         return res.send(placeholderSvg);
       }
 
       // Handle both data URL format and raw base64 format
       let imageBuffer: Buffer;
       let contentType = 'image/jpeg'; // default
-      
+
       if (prescription.imageData.startsWith('data:')) {
         // Parse data URL format: data:image/png;base64,iVBORw0KGgoAAAA...
         const matches = prescription.imageData.match(/^data:([^;]+);base64,(.+)$/);
@@ -131,7 +131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         imageBuffer = Buffer.from(prescription.imageData, 'base64');
         contentType = 'image/jpeg'; // uploaded images are converted to JPEG
       }
-      
+
       // Set appropriate headers
       res.set({
         'Content-Type': contentType,
@@ -199,7 +199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Use existing image data
       let base64Image = existingPrescription.imageData;
-      
+
       // Handle data URL format if present
       if (base64Image.startsWith('data:')) {
         const matches = base64Image.match(/^data:[^;]+;base64,(.+)$/);
@@ -214,7 +214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse selected models and custom prompts, fallback to default config
       let models = typeof selectedModels === 'string' ? JSON.parse(selectedModels) : selectedModels;
       let prompts = typeof customPrompts === 'string' ? JSON.parse(customPrompts) : customPrompts;
-      
+
       // If no models/prompts provided, load default configuration
       if (!models || !prompts) {
         const defaultConfig = await storage.getDefaultExtractionConfig();
@@ -223,7 +223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           prompts = prompts || defaultConfig.customPrompts;
         }
       }
-      
+
       // Final fallback to hardcoded defaults
       models = models || ["openai", "claude", "gemini"];
       prompts = prompts || {};
@@ -233,15 +233,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Store extraction results
       console.log(`Processing ${modelResults.length} model results for prescription ${id}`);
-      
+
       for (const result of modelResults) {
         console.log(`Storing results for model: ${result.model}`);
-        
+
         // Flatten the prescription data for individual field storage
         const flattenedData = flattenPrescriptionData(result.data);
-        
+
         console.log(`Flattened data for ${result.model}:`, Object.keys(flattenedData).length, 'fields');
-        
+
         for (const [fieldName, value] of Object.entries(flattenedData)) {
           // Store all extraction results, including "NA" values
           await storage.createExtractionResult({
@@ -265,8 +265,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         processingStatus: "completed"
       });
 
-      res.json({ 
-        message: "Processing completed successfully", 
+      res.json({
+        message: "Processing completed successfully",
         extractedData: finalData,
         modelResults: modelResults.map(r => ({
           model: r.model,
@@ -277,14 +277,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     } catch (error) {
       console.error("Error processing prescription:", error);
-      
+
       // Update status to failed
       try {
         await storage.updatePrescription(req.params.id, { processingStatus: "failed" });
       } catch (updateError) {
         console.error("Error updating prescription status to failed:", updateError);
       }
-      
+
       res.status(500).json({ error: "Failed to process prescription" });
     }
   });
@@ -315,7 +315,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (existingPrescription.imageData) {
         // Use existing image data
         base64Image = existingPrescription.imageData;
-        
+
         // Handle data URL format if present
         if (base64Image.startsWith('data:')) {
           const matches = base64Image.match(/^data:[^;]+;base64,(.+)$/);
@@ -333,7 +333,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse selected models and custom prompts, fallback to default config
       let models = typeof selectedModels === 'string' ? JSON.parse(selectedModels) : selectedModels;
       let prompts = typeof customPrompts === 'string' ? JSON.parse(customPrompts) : customPrompts;
-      
+
       // If no models/prompts provided, load default configuration
       if (!models || !prompts) {
         const defaultConfig = await storage.getDefaultExtractionConfig();
@@ -342,7 +342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           prompts = prompts || defaultConfig.customPrompts;
         }
       }
-      
+
       // Final fallback to hardcoded defaults
       models = models || ['openai', 'claude', 'gemini'];
       prompts = prompts || {};
@@ -352,15 +352,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Store extraction results
       console.log(`Processing ${modelResults.length} model results for prescription ${id}`);
-      
+
       for (const result of modelResults) {
         console.log(`Storing results for model: ${result.model}`);
-        
+
         // Flatten the prescription data for individual field storage
         const flattenedData = flattenPrescriptionData(result.data);
-        
+
         console.log(`Flattened data for ${result.model}:`, Object.keys(flattenedData).length, 'fields');
-        
+
         for (const [fieldName, value] of Object.entries(flattenedData)) {
           // Store all extraction results, including "NA" values
           await storage.createExtractionResult({
@@ -397,24 +397,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const forceDelete = String(req.query.force || '').toLowerCase() === 'true';
-      
+
       const prescription = await storage.getPrescription(id);
-      
+
       if (!prescription) {
         return res.status(404).json({ error: "Prescription not found" });
       }
-      
+
       // For completed prescriptions, require explicit force=true parameter as safety check
       if (prescription.processingStatus === 'completed' && !forceDelete) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: "Completed prescriptions require force=true parameter to delete",
-          requiresConfirmation: true 
+          requiresConfirmation: true
         });
       }
-      
+
       // Delete the prescription and all related data
       const success = await storage.deletePrescription(id);
-      
+
       if (success) {
         const statusText = prescription.processingStatus === 'queued' ? 'cancelled' : 'deleted';
         res.json({ message: `Prescription ${statusText} successfully` });
@@ -432,19 +432,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const prescription = await storage.getPrescription(id);
-      
+
       if (!prescription) {
         return res.status(404).json({ error: "Prescription not found" });
       }
-      
+
       // Only allow retry of failed prescriptions
       if (prescription.processingStatus !== 'failed') {
         return res.status(400).json({ error: "Can only retry failed prescriptions" });
       }
-      
+
       // Reset status to queued for reprocessing
       await storage.updatePrescription(id, { processingStatus: 'queued' });
-      
+
       res.json({ message: "Prescription queued for retry" });
     } catch (error) {
       console.error("Error retrying prescription:", error);
@@ -457,22 +457,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const prescription = await storage.getPrescription(id);
-      
+
       if (!prescription) {
         return res.status(404).json({ error: "Prescription not found" });
       }
-      
+
       // Allow reprocessing of completed or failed prescriptions
       if (prescription.processingStatus !== 'completed' && prescription.processingStatus !== 'failed') {
         return res.status(400).json({ error: "Can only reprocess completed or failed prescriptions" });
       }
-      
+
       // Clear existing extraction results for this prescription
       await storage.clearExtractionResults(id);
-      
+
       // Reset status to queued for reprocessing
       await storage.updatePrescription(id, { processingStatus: 'queued' });
-      
+
       res.json({ message: "Prescription queued for reprocessing with enhanced AI extraction" });
     } catch (error) {
       console.error("Error reprocessing prescription:", error);
@@ -508,7 +508,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { prescriptionId, prescriptionIds } = req.query;
       let prescriptions;
-      
+
       if (prescriptionIds) {
         // Export multiple specified prescriptions
         const ids = (prescriptionIds as string).split(',').filter(id => id.trim());
@@ -523,9 +523,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Export all prescriptions
         prescriptions = await storage.getAllPrescriptions();
       }
-      
+
       const allResults = await storage.getAllExtractionResults();
-      
+
       if (prescriptions.length === 0) {
         // Return empty CSV with headers when no data
         const headers = "id,fileName,uploadedAt,processingStatus,patient_patientName,patient_age,patient_gender";
@@ -539,7 +539,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get latest extraction results for this prescription (including any edits)
         const prescriptionResults = allResults.filter(r => r.prescriptionId === p!.id);
         const currentData = aggregateExtractionResults(prescriptionResults);
-        
+
         return {
           id: p!.id,
           fileName: p!.fileName,
@@ -566,14 +566,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { prescriptionId, prescriptionIds } = req.query;
       let prescriptions;
       let extractionResults;
-      
+
       if (prescriptionIds) {
         // Export multiple specified prescriptions
         const ids = (prescriptionIds as string).split(',').filter(id => id.trim());
         const prescriptionPromises = ids.map(id => storage.getPrescription(id.trim()));
         const results = await Promise.all(prescriptionPromises);
         prescriptions = results.filter(p => p !== null);
-        
+
         // Get extraction results for all selected prescriptions
         const extractionPromises = ids.map(id => storage.getExtractionResults(id.trim()));
         const extractionArrays = await Promise.all(extractionPromises);
@@ -617,7 +617,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update individual extraction results in the extraction_results table
       const extractionResults = await storage.getExtractionResults(id);
-      
+
       for (const [fieldName, newValue] of Object.entries(fieldUpdates)) {
         // Update all models' results for this field
         for (const result of extractionResults) {
@@ -659,6 +659,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Seamless "Upload & Process" - Single request, synchronous result
+  app.post("/api/prescriptions/upload-and-process", upload.single('files'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded. Please use the 'files' field in form-data." });
+      }
+
+      // 1. Process and store image
+      const processedImage = await sharp(req.file.buffer)
+        .jpeg({ quality: 90 })
+        .toBuffer();
+      const base64Image = processedImage.toString('base64');
+
+      // 2. Create record
+      const prescription = await storage.createPrescription({
+        fileName: req.file.originalname,
+        fileSize: `${(req.file.size / 1024 / 1024).toFixed(2)} MB`,
+        processingStatus: "processing",
+        extractedData: null,
+        imageData: base64Image,
+      });
+
+      // 3. Run AI Extraction immediately via OpenRouter
+      const defaultConfig = await storage.getDefaultExtractionConfig();
+      const models = defaultConfig?.selectedModels || ["openai", "claude", "gemini"];
+      const prompts = defaultConfig?.customPrompts || {};
+
+      const modelResults = await aiService.extractWithAllModels(base64Image, models, prompts);
+
+      // 4. Store and aggregate results
+      for (const result of modelResults) {
+        const flattenedData = flattenPrescriptionData(result.data);
+        for (const [fieldName, value] of Object.entries(flattenedData)) {
+          await storage.createExtractionResult({
+            prescriptionId: prescription.id,
+            modelName: result.model,
+            fieldName,
+            extractedValue: value || "NA",
+            confidence: result.confidence,
+            processingTime: result.processingTime,
+          });
+        }
+      }
+
+      const extractionResults = await storage.getExtractionResults(prescription.id);
+      const finalData = aggregateExtractionResults(extractionResults);
+
+      await storage.updatePrescription(prescription.id, {
+        extractedData: finalData,
+        processingStatus: "completed"
+      });
+
+      res.json({
+        id: prescription.id,
+        status: "completed",
+        fileName: prescription.fileName,
+        extractedData: finalData,
+        modelResults: modelResults.map(r => ({
+          model: r.model,
+          confidence: r.confidence,
+          processingTime: r.processingTime
+        }))
+      });
+
+    } catch (error) {
+      console.error("Error in upload-and-process:", error);
+      res.status(500).json({ error: "Failed to upload and process prescription" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
@@ -666,7 +736,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 // Helper function to aggregate extraction results back to nested structure
 function aggregateExtractionResults(extractionResults: any[]): any {
   if (!extractionResults || extractionResults.length === 0) return {};
-  
+
   const aggregated: any = {
     prescriptionType: {},
     patientDetails: {},
@@ -688,12 +758,12 @@ function aggregateExtractionResults(extractionResults: any[]): any {
   extractionResults.forEach(result => {
     const fieldName = result.fieldName || result.field_name;
     const value = result.extractedValue || result.extracted_value;
-    
+
     // Skip if fieldName is undefined or null or value is NA
     if (!fieldName || !value || value === "NA") {
       return;
     }
-    
+
     if (fieldName.startsWith("prescriptionType_")) {
       const subField = fieldName.replace("prescriptionType_", "");
       aggregated.prescriptionType[subField] = value;
@@ -726,7 +796,7 @@ function aggregateExtractionResults(extractionResults: any[]): any {
       // Handle both single medications and indexed medications
       const remainingField = fieldName.replace("medication_", "");
       const indexMatch = remainingField.match(/^(\d+)_(.+)$/);
-      
+
       if (indexMatch) {
         // Indexed medication (e.g., medication_2_drugName)
         const index = indexMatch[1];
@@ -763,7 +833,7 @@ function aggregateExtractionResults(extractionResults: any[]): any {
   });
 
   // Convert medication groups to array, filtering out empty medications
-  aggregated.medications = Object.values(medicationGroups).filter(med => 
+  aggregated.medications = Object.values(medicationGroups).filter(med =>
     med && med.drugName && med.drugName !== "NA"
   );
 
@@ -831,7 +901,7 @@ function flattenPrescriptionData(data: any): Record<string, string> {
         });
       }
     });
-    
+
     // Also maintain backward compatibility with single medication fields
     if (data.medications.length > 0 && data.medications[0]) {
       Object.entries(data.medications[0]).forEach(([key, value]) => {

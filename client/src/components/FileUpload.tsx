@@ -34,6 +34,9 @@ export default function FileUpload({ selectedFiles, onFilesSelected }: FileUploa
       // apiRequest returns a Response, we need to handle FormData differently
       const response = await fetch("/api/prescriptions/upload", {
         method: "POST",
+        headers: {
+          "X-API-Key": import.meta.env.VITE_EXTERNAL_API_KEY || "",
+        },
         body: formData,
         credentials: "include",
       });
@@ -94,14 +97,17 @@ export default function FileUpload({ selectedFiles, onFilesSelected }: FileUploa
     try {
       const files = uploadedFiles.map(f => f.file);
       const uploadResult = await uploadMutation.mutateAsync(files);
-      
+
       // Fetch current configuration for processing
       let selectedModels = ['openai', 'claude', 'gemini'];
       let customPrompts = {};
-      
+
       try {
         const configResponse = await fetch('/api/configs', {
-          credentials: 'include'
+          credentials: 'include',
+          headers: {
+            "X-API-Key": import.meta.env.VITE_EXTERNAL_API_KEY || "",
+          }
         });
         if (configResponse.ok) {
           const configs = await configResponse.json();
@@ -112,7 +118,7 @@ export default function FileUpload({ selectedFiles, onFilesSelected }: FileUploa
       } catch (error) {
         console.warn('Failed to fetch config, using defaults:', error);
       }
-      
+
       // Then process each uploaded prescription with AI
       if (uploadResult && uploadResult.prescriptions) {
         for (const prescription of uploadResult.prescriptions) {
@@ -120,47 +126,50 @@ export default function FileUpload({ selectedFiles, onFilesSelected }: FileUploa
           const file = files.find(f => f.name === prescription.fileName);
           if (file) {
             // Update UI to show processing status
-            setUploadedFiles(prev => 
-              prev.map(uf => 
+            setUploadedFiles(prev =>
+              prev.map(uf =>
                 uf.file.name === file.name ? { ...uf, status: 'processing' } : uf
               )
             );
-            
+
             // Create FormData for processing
             const formData = new FormData();
             formData.append('file', file);
             formData.append('selectedModels', JSON.stringify(selectedModels));
             formData.append('customPrompts', JSON.stringify(customPrompts));
-            
+
             // Process with AI models
             const processResponse = await fetch(`/api/prescriptions/${prescription.id}/process`, {
               method: "POST",
+              headers: {
+                "X-API-Key": import.meta.env.VITE_EXTERNAL_API_KEY || "",
+              },
               body: formData,
               credentials: "include",
             });
 
             if (!processResponse.ok) {
               // Update UI to show error status
-              setUploadedFiles(prev => 
-                prev.map(uf => 
+              setUploadedFiles(prev =>
+                prev.map(uf =>
                   uf.file.name === file.name ? { ...uf, status: 'error' } : uf
                 )
               );
               throw new Error(`Processing failed for ${prescription.fileName}`);
             } else {
               // Update UI to show completed status
-              setUploadedFiles(prev => 
-                prev.map(uf => 
+              setUploadedFiles(prev =>
+                prev.map(uf =>
                   uf.file.name === file.name ? { ...uf, status: 'completed' } : uf
                 )
               );
             }
           }
         }
-        
+
         // Invalidate queries to refresh data
         queryClient.invalidateQueries({ queryKey: ['/api/prescriptions'] });
-        
+
         toast({
           title: "Processing completed",
           description: `${uploadResult.prescriptions.length} prescriptions processed with AI models`,
@@ -187,11 +196,10 @@ export default function FileUpload({ selectedFiles, onFilesSelected }: FileUploa
         {/* Drag and Drop Area */}
         <div
           {...getRootProps()}
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition-all cursor-pointer ${
-            isDragActive
+          className={`border-2 border-dashed rounded-lg p-8 text-center transition-all cursor-pointer ${isDragActive
               ? "border-primary bg-primary/5"
               : "border-border hover:border-primary hover:bg-primary/5"
-          }`}
+            }`}
           data-testid="drop-zone"
         >
           <input {...getInputProps()} data-testid="file-input" />
@@ -216,8 +224,8 @@ export default function FileUpload({ selectedFiles, onFilesSelected }: FileUploa
         {uploadedFiles.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="file-preview-grid">
             {uploadedFiles.map((uploadedFile, index) => (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 className="bg-muted rounded-lg p-4 fade-in"
                 data-testid={`file-preview-${index}`}
               >
@@ -247,8 +255,8 @@ export default function FileUpload({ selectedFiles, onFilesSelected }: FileUploa
                   )}
                 </div>
                 <div className="space-y-2">
-                  <p 
-                    className="text-sm font-medium text-foreground truncate" 
+                  <p
+                    className="text-sm font-medium text-foreground truncate"
                     title={uploadedFile.file.name}
                     data-testid={`file-name-${index}`}
                   >
@@ -258,13 +266,12 @@ export default function FileUpload({ selectedFiles, onFilesSelected }: FileUploa
                     <span className="text-muted-foreground" data-testid={`file-size-${index}`}>
                       {formatFileSize(uploadedFile.file.size)}
                     </span>
-                    <span 
-                      className={`px-2 py-1 rounded-full ${
-                        uploadedFile.status === 'ready' ? 'text-green-600 bg-green-50' :
-                        uploadedFile.status === 'processing' ? 'text-blue-600 bg-blue-50' :
-                        uploadedFile.status === 'completed' ? 'text-green-600 bg-green-100' :
-                        'text-red-600 bg-red-50'
-                      }`}
+                    <span
+                      className={`px-2 py-1 rounded-full ${uploadedFile.status === 'ready' ? 'text-green-600 bg-green-50' :
+                          uploadedFile.status === 'processing' ? 'text-blue-600 bg-blue-50' :
+                            uploadedFile.status === 'completed' ? 'text-green-600 bg-green-100' :
+                              'text-red-600 bg-red-50'
+                        }`}
                       data-testid={`file-status-${index}`}
                     >
                       {uploadedFile.status.charAt(0).toUpperCase() + uploadedFile.status.slice(1)}
@@ -280,7 +287,7 @@ export default function FileUpload({ selectedFiles, onFilesSelected }: FileUploa
         {uploadedFiles.length > 0 && (
           <div className="flex items-center justify-between" data-testid="batch-actions">
             <div className="flex items-center space-x-4">
-              <Button 
+              <Button
                 onClick={processAll}
                 disabled={uploadMutation.isPending}
                 data-testid="button-process-all"
@@ -288,8 +295,8 @@ export default function FileUpload({ selectedFiles, onFilesSelected }: FileUploa
                 <Play className="w-4 h-4 mr-2" />
                 {uploadMutation.isPending ? "Processing..." : "Process All"}
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={clearAll}
                 data-testid="button-clear-all"
               >

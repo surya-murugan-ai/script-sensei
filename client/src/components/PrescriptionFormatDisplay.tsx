@@ -23,7 +23,11 @@ export default function PrescriptionFormatDisplay({ prescriptionId }: Prescripti
     queryKey: ['/api/prescriptions', prescriptionId],
     queryFn: async () => {
       if (!prescriptionId) return null;
-      const response = await fetch(`/api/prescriptions/${prescriptionId}`);
+      const response = await fetch(`/api/prescriptions/${prescriptionId}`, {
+        headers: {
+          "X-API-Key": import.meta.env.VITE_EXTERNAL_API_KEY || "",
+        }
+      });
       return response.json();
     },
     enabled: !!prescriptionId,
@@ -36,7 +40,7 @@ export default function PrescriptionFormatDisplay({ prescriptionId }: Prescripti
     if (extractedData) {
       const keys = fieldPath.split('.');
       let value = extractedData;
-      
+
       for (const key of keys) {
         if (value && typeof value === 'object' && key in value) {
           value = value[key];
@@ -45,20 +49,20 @@ export default function PrescriptionFormatDisplay({ prescriptionId }: Prescripti
           break;
         }
       }
-      
+
       if (value && value !== "NA" && value !== "") {
         return String(value);
       }
     }
-    
+
     // Fallback to extraction results consensus
     if (Array.isArray(extractionResults) && prescriptionId && fallbackFieldName) {
-      const results = extractionResults.filter((r: any) => 
+      const results = extractionResults.filter((r: any) =>
         (r.prescriptionId === prescriptionId || r.prescription_id === prescriptionId) &&
         (r.fieldName === fallbackFieldName || r.field_name === fallbackFieldName) &&
         (r.extractedValue !== "NA" && r.extracted_value !== "NA" && r.extractedValue !== "" && r.extracted_value !== "")
       );
-      
+
       if (results.length > 0) {
         // Get most common value
         const valueCounts: Record<string, number> = {};
@@ -68,15 +72,15 @@ export default function PrescriptionFormatDisplay({ prescriptionId }: Prescripti
             valueCounts[value] = (valueCounts[value] || 0) + 1;
           }
         });
-        
-        const mostCommon = Object.entries(valueCounts).reduce((a, b) => 
+
+        const mostCommon = Object.entries(valueCounts).reduce((a, b) =>
           valueCounts[a[0]] > valueCounts[b[0]] ? a : b
         );
-        
+
         return mostCommon[0] || "";
       }
     }
-    
+
     return "";
   };
 
@@ -85,33 +89,33 @@ export default function PrescriptionFormatDisplay({ prescriptionId }: Prescripti
     // First try structured data - check both possible nested structures
     const extractedData = prescriptionDetail?.extractedData || prescriptionDetail?.prescription?.extractedData;
     if (extractedData?.medications && Array.isArray(extractedData.medications)) {
-      const structuredMeds = extractedData.medications.filter((med: any) => 
+      const structuredMeds = extractedData.medications.filter((med: any) =>
         med.drugName && med.drugName !== "NA" && med.drugName !== ""
       );
       return structuredMeds;
     }
-    
+
     // Fallback to extraction results - group by medication index
     if (!Array.isArray(extractionResults) || !prescriptionId) return [];
-    
-    const results = extractionResults.filter((r: any) => 
+
+    const results = extractionResults.filter((r: any) =>
       (r.prescriptionId === prescriptionId || r.prescription_id === prescriptionId) &&
       (r.fieldName?.includes('medication_') || r.field_name?.includes('medication_'))
     );
-    
+
     const medicationGroups: Record<string, any> = {};
-    
+
     results.forEach((r: any) => {
       const fieldName = r.fieldName || r.field_name || "";
       const value = r.extractedValue || r.extracted_value || "";
-      
+
       if (value && value !== "NA") {
         // Parse field name like "medication_drugName" or "medication_1_drugName"
         const match = fieldName.match(/medication_(?:(\d+)_)?(\w+)/);
         if (match) {
           const index = match[1] || "0";
           const field = match[2];
-          
+
           if (!medicationGroups[index]) {
             medicationGroups[index] = {};
           }
@@ -119,7 +123,7 @@ export default function PrescriptionFormatDisplay({ prescriptionId }: Prescripti
         }
       }
     });
-    
+
     // Convert to array format
     return Object.values(medicationGroups)
       .filter(med => med.drugName)
@@ -136,13 +140,17 @@ export default function PrescriptionFormatDisplay({ prescriptionId }: Prescripti
 
   const handleExport = async (format: 'csv' | 'json') => {
     try {
-      const exportUrl = prescriptionId 
+      const exportUrl = prescriptionId
         ? `/api/export/${format}?prescriptionId=${prescriptionId}`
         : `/api/export/${format}`;
-      
-      const response = await fetch(exportUrl);
+
+      const response = await fetch(exportUrl, {
+        headers: {
+          "X-API-Key": import.meta.env.VITE_EXTERNAL_API_KEY || "",
+        }
+      });
       if (!response.ok) throw new Error('Export failed');
-      
+
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -152,7 +160,7 @@ export default function PrescriptionFormatDisplay({ prescriptionId }: Prescripti
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      
+
       toast({
         title: "Export successful",
         description: `Results exported as ${format.toUpperCase()}`,
@@ -181,7 +189,7 @@ export default function PrescriptionFormatDisplay({ prescriptionId }: Prescripti
   }
 
   const medications = getMedications();
-  
+
 
   return (
     <div className="space-y-6">
@@ -194,8 +202,8 @@ export default function PrescriptionFormatDisplay({ prescriptionId }: Prescripti
               <span>Prescription Extraction</span>
             </CardTitle>
             <div className="flex items-center space-x-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => handleExport('csv')}
                 data-testid="button-export-csv"
@@ -203,8 +211,8 @@ export default function PrescriptionFormatDisplay({ prescriptionId }: Prescripti
                 <Download className="w-4 h-4 mr-2" />
                 Export CSV
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => handleExport('json')}
                 data-testid="button-export-json"
@@ -227,9 +235,9 @@ export default function PrescriptionFormatDisplay({ prescriptionId }: Prescripti
         </CardHeader>
         <CardContent>
           <p className="text-lg">
-            {getFieldValue('prescriptionType.type', 'prescriptionType') || 
-             getFieldValue('prescriptionType.customType', 'prescriptionType_custom') || 
-             "General Medicine"}
+            {getFieldValue('prescriptionType.type', 'prescriptionType') ||
+              getFieldValue('prescriptionType.customType', 'prescriptionType_custom') ||
+              "General Medicine"}
           </p>
         </CardContent>
       </Card>
@@ -251,7 +259,7 @@ export default function PrescriptionFormatDisplay({ prescriptionId }: Prescripti
             const allergies = getFieldValue('patientDetails.allergies', 'patient_allergies');
             const diagnosis = getFieldValue('clinicalDetails.diagnosis', 'patient_diagnosis');
             const date = getFieldValue('patientDetails.date', 'patient_date');
-            
+
             return (
               <>
                 {patientName && (
@@ -318,7 +326,7 @@ export default function PrescriptionFormatDisplay({ prescriptionId }: Prescripti
             const weight = getFieldValue('vitals.weight', 'vitals_weight');
             const height = getFieldValue('vitals.height', 'vitals_height');
             const bmi = getFieldValue('vitals.bmi', 'vitals_bmi');
-            
+
             return (
               <>
                 <div>
@@ -327,21 +335,21 @@ export default function PrescriptionFormatDisplay({ prescriptionId }: Prescripti
                     {chiefComplaints || "[Chief complaints not documented]"}
                   </div>
                 </div>
-                
+
                 <div>
                   <h4 className="font-semibold text-purple-600 mb-2">History / Medical History (M/H):</h4>
                   <div className="pl-4 text-sm bg-muted p-3 rounded">
                     {medicalHistory || "[Medical history not available]"}
                   </div>
                 </div>
-                
+
                 <div>
                   <h4 className="font-semibold text-purple-600 mb-2">On Examination (O/E):</h4>
                   <div className="pl-4 text-sm bg-muted p-3 rounded">
                     {examination || "[Examination findings not documented]"}
                   </div>
                 </div>
-                
+
                 <div>
                   <h4 className="font-semibold text-purple-600 mb-2">Vitals:</h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
@@ -454,7 +462,7 @@ export default function PrescriptionFormatDisplay({ prescriptionId }: Prescripti
             const lifestyleAdvice = getFieldValue('advice.lifestyleAdvice', 'followUp_lifestyleAdvice');
             const investigations = getFieldValue('advice.investigations', 'investigations_others');
             const followUp = getFieldValue('advice.followUpInstructions', 'followUp_reviewDate');
-            
+
             return (
               <>
                 <div>
@@ -488,7 +496,7 @@ export default function PrescriptionFormatDisplay({ prescriptionId }: Prescripti
             const doctorName = getFieldValue('doctorDetails.doctorName', 'doctor_doctorName');
             const signature = getFieldValue('doctorDetails.signature', 'doctor_signature');
             const registrationNo = getFieldValue('doctorDetails.registrationNo', 'doctor_registrationNumber');
-            
+
             return (
               <>
                 <div>
@@ -526,7 +534,7 @@ export default function PrescriptionFormatDisplay({ prescriptionId }: Prescripti
             const contact = getFieldValue('clinicDetails.contactNumbers', 'doctor_contactNumber');
             const email = getFieldValue('clinicDetails.email', 'doctor_email');
             const website = getFieldValue('clinicDetails.website', 'doctor_website');
-            
+
             return (
               <>
                 <div>
@@ -577,13 +585,13 @@ export default function PrescriptionFormatDisplay({ prescriptionId }: Prescripti
               const patientName = getFieldValue('patientDetails.patientName', 'patient_patientName');
               const age = getFieldValue('patientDetails.age', 'patient_age');
               const prescriptionType = getFieldValue('prescriptionType.type', 'prescriptionType') || "General Medicine";
-              
+
               if (!diagnosis && medications.length === 0 && !chiefComplaints) {
                 return "No significant medical information was extracted from this prescription image. Please ensure the image is clear and contains readable prescription details.";
               }
-              
+
               let summary = "📋 ";
-              
+
               if (patientName && age) {
                 summary += `Patient ${patientName} (${age} years) `;
               } else if (patientName) {
@@ -591,25 +599,25 @@ export default function PrescriptionFormatDisplay({ prescriptionId }: Prescripti
               } else {
                 summary += "The patient ";
               }
-              
+
               if (diagnosis) {
                 summary += `has been diagnosed with ${diagnosis.toLowerCase()}. `;
               } else if (chiefComplaints) {
                 summary += `presents with complaints of ${chiefComplaints.toLowerCase()}. `;
               }
-              
+
               if (allergies && allergies !== "No known allergies") {
                 summary += `⚠️ Known allergies: ${allergies}. `;
               }
-              
+
               if (medications.length > 0) {
                 const medNames = medications.map((m: any) => m.drugName).join(", ");
                 summary += `💊 Prescribed medications: ${medNames}. `;
               }
-              
+
               summary += `This is a ${prescriptionType.toLowerCase()} prescription. `;
               summary += "⚠️ Please ensure proper medication adherence and follow-up as advised by the healthcare provider.";
-              
+
               return summary;
             })()}
           </div>

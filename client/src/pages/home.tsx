@@ -17,11 +17,15 @@ export default function Home() {
     select: (data) => data || [],
   });
 
-  const latestPrescriptionId = prescriptions && prescriptions.length > 0 ? prescriptions[0].id : null;
+  const latestPrescriptionId = (prescriptions as any[]) && (prescriptions as any[]).length > 0 ? (prescriptions as any[])[0].id : null;
 
   const handleExportAll = async (format: 'csv' | 'json') => {
     try {
-      const response = await fetch(`/api/export/${format}`);
+      const response = await fetch(`/api/export/${format}`, {
+        headers: {
+          "X-API-Key": import.meta.env.VITE_EXTERNAL_API_KEY || "",
+        }
+      });
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -39,7 +43,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex bg-background" data-testid="home-page">
       <Sidebar />
-      
+
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Top Navigation */}
@@ -51,23 +55,23 @@ export default function Home() {
             </div>
             <div className="flex items-center space-x-4">
               <Link href="/results">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   data-testid="button-view-results"
                 >
                   <BarChart3 className="w-4 h-4 mr-2" />
                   View Results
                 </Button>
               </Link>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 className="text-muted-foreground hover:text-foreground"
                 data-testid="button-help"
               >
                 <HelpCircle className="w-4 h-4 mr-2" />
                 Help
               </Button>
-              <Button 
+              <Button
                 onClick={() => handleExportAll('csv')}
                 data-testid="button-export-all"
               >
@@ -80,13 +84,13 @@ export default function Home() {
 
         {/* Main Content Area */}
         <main className="flex-1 p-6 space-y-6 overflow-auto" data-testid="main-content">
-          <FileUpload 
+          <FileUpload
             selectedFiles={selectedFiles}
             onFilesSelected={setSelectedFiles}
           />
-          
+
           <PrescriptionFormatDisplay prescriptionId={latestPrescriptionId} />
-          
+
           <ProcessingQueue />
         </main>
       </div>
