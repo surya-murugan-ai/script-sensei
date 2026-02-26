@@ -29,7 +29,7 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      let logLine = `[SYNC-TEST-001] ${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
@@ -43,6 +43,11 @@ app.use((req, res, next) => {
   });
 
   next();
+});
+
+// Diagnostic route to verify deployment
+app.get("/api/debug-ping", (_req, res) => {
+  res.json({ status: "ok", build_id: "SYNC-TEST-001", node_env: process.env.NODE_ENV });
 });
 
 (async () => {
@@ -75,6 +80,6 @@ app.use((req, res, next) => {
     port,
     host,
   }, () => {
-    log(`serving on ${host}:${port}`);
+    log(`[SYNC-TEST-001] serving on ${host}:${port}`);
   });
 })();
