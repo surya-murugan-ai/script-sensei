@@ -1,14 +1,19 @@
 import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { log } from "./utils";
-import { WebSocketServer } from 'ws';
-import type { Server } from 'http';
-import { dbLogger } from './dbLogger';
+import { setupVite, serveStatic, log } from "./vite";
+import cors from "cors";
+import { apiAuth } from "./api-auth";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Enable CORS for all origins (adjust for production as needed)
+app.use(cors());
+
+// Enable API Authentication
+app.use(apiAuth);
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -55,39 +60,11 @@ app.use((req, res, next) => {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   if (app.get("env") === "development") {
-    // Dynamic import - only loads vite in development
-    const { setupVite } = await import("./vite.js");
     await setupVite(app, server);
   } else {
-    // Dynamic import - only loads serveStatic in production
-    const { serveStatic } = await import("./vite.js");
     serveStatic(app);
   }
 
-  // Setup WebSocket server for real-time updates
-  const wss = new WebSocketServer({ server, path: '/ws' });
-  
-  wss.on('connection', (ws) => {
-    log('WebSocket client connected');
-    
-    ws.on('error', (error) => {
-      console.error('WebSocket error:', error);
-    });
-    
-    ws.on('close', () => {
-      log('WebSocket client disconnected');
-    });
-    
-    // Send initial connection confirmation
-    ws.send(JSON.stringify({ type: 'connected', timestamp: new Date().toISOString() }));
-  });
-  
-  // Make WebSocket server available globally for broadcasting
-  (global as any).wss = wss;
-  
-  // Start database monitoring
-  dbLogger.startLogging(30000); // Log every 30 seconds
-  
   // ALWAYS serve the app on the port specified in the environment variable PORT
   // Other ports are firewalled. Default to 5000 if not specified.
   // this serves both the API and the client.
@@ -99,7 +76,5 @@ app.use((req, res, next) => {
     host,
   }, () => {
     log(`serving on ${host}:${port}`);
-    log('WebSocket server ready on /ws');
-    log('Database monitoring started');
   });
 })();

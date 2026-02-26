@@ -23,7 +23,11 @@ export default function PrescriptionReview() {
     queryKey: ['/api/prescriptions', selectedPrescriptionId],
     queryFn: async () => {
       if (!selectedPrescriptionId) return null;
-      const response = await fetch(`/api/prescriptions/${selectedPrescriptionId}`);
+      const response = await fetch(`/api/prescriptions/${selectedPrescriptionId}`, {
+        headers: {
+          "X-API-Key": import.meta.env.VITE_EXTERNAL_API_KEY || "",
+        }
+      });
       return response.json();
     },
     enabled: !!selectedPrescriptionId,
@@ -58,7 +62,7 @@ export default function PrescriptionReview() {
   return (
     <div className="min-h-screen flex bg-background" data-testid="prescription-review-page">
       <Sidebar />
-      
+
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
@@ -82,8 +86,8 @@ export default function PrescriptionReview() {
             <label className="block text-sm font-medium text-foreground mb-2">
               Select Prescription
             </label>
-            <Select 
-              value={selectedPrescriptionId} 
+            <Select
+              value={selectedPrescriptionId}
               onValueChange={setSelectedPrescriptionId}
               data-testid="select-prescription"
             >
@@ -97,8 +101,8 @@ export default function PrescriptionReview() {
                   <SelectItem value="empty" disabled>No prescriptions available</SelectItem>
                 ) : (
                   prescriptions.map((prescription: any) => (
-                    <SelectItem 
-                      key={prescription.id} 
+                    <SelectItem
+                      key={prescription.id}
                       value={prescription.id}
                       data-testid={`select-option-${prescription.id}`}
                     >
@@ -107,8 +111,8 @@ export default function PrescriptionReview() {
                         <span className="truncate">
                           {prescription.fileName || `Prescription ${prescription.id.slice(0, 8)}`}
                         </span>
-                        <Badge 
-                          variant="secondary" 
+                        <Badge
+                          variant="secondary"
                           className={`text-xs ${getStatusColor(prescription.processingStatus)}`}
                         >
                           {prescription.processingStatus || 'unknown'}
@@ -172,7 +176,7 @@ export default function PrescriptionReview() {
                     </div>
                   ) : prescriptionData && (prescriptionData as any).prescription?.extractedData ? (
                     <div className="space-y-4">
-                      <PrescriptionFormatDisplay 
+                      <PrescriptionFormatDisplay
                         prescriptionId={selectedPrescriptionId}
                       />
                     </div>
@@ -180,7 +184,7 @@ export default function PrescriptionReview() {
                     <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
                       <Eye className="w-12 h-12 mb-2" />
                       <p className="text-center">
-                        {prescriptionData && (prescriptionData as any).prescription?.processingStatus === 'completed' 
+                        {prescriptionData && (prescriptionData as any).prescription?.processingStatus === 'completed'
                           ? 'No extraction data available'
                           : 'Prescription not yet processed'
                         }
@@ -204,7 +208,7 @@ export default function PrescriptionReview() {
                 <FileText className="w-16 h-16 mb-4" />
                 <h3 className="text-lg font-medium mb-2">Select a Prescription</h3>
                 <p className="text-center max-w-md">
-                  Choose a prescription from the dropdown above to view the original image 
+                  Choose a prescription from the dropdown above to view the original image
                   alongside the AI-extracted medical data.
                 </p>
               </CardContent>

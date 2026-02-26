@@ -6,7 +6,6 @@ import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { useWebSocket } from "@/hooks/useWebSocket";
 
 interface QueueItem {
   id: string;
@@ -22,14 +21,10 @@ interface QueueItem {
 export default function ProcessingQueue() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  
-  // Connect to WebSocket for real-time updates
-  useWebSocket();
-  
+
   const { data: prescriptions } = useQuery({
     queryKey: ['/api/prescriptions'],
     select: (data) => data || [],
-    // No polling - updates via WebSocket
   });
 
   const { data: configs } = useQuery({
@@ -41,11 +36,14 @@ export default function ProcessingQueue() {
   const { data: allExtractionResults } = useQuery({
     queryKey: ['/api/extraction-results'],
     queryFn: async () => {
-      const response = await fetch('/api/extraction-results');
+      const response = await fetch('/api/extraction-results', {
+        headers: {
+          "X-API-Key": import.meta.env.VITE_EXTERNAL_API_KEY || "",
+        }
+      });
       return response.json();
     },
     select: (data) => data || [],
-    // No polling - updates via WebSocket
   });
 
   // Transform real prescription data into queue items
@@ -54,16 +52,16 @@ export default function ProcessingQueue() {
     const defaultConfig = Array.isArray(configs) ? configs.find((c: any) => c.isDefault) : null;
     const selectedModels = defaultConfig?.selectedModels || ['openai', 'claude', 'gemini'];
     const totalModels = selectedModels.length;
-    
+
     // Count unique models that have processed this prescription
     const prescriptionResults = Array.isArray(allExtractionResults) ? allExtractionResults.filter((result: any) => result.prescriptionId === prescription.id) : [];
     const uniqueModels = new Set(prescriptionResults.map((result: any) => result.modelName));
     const modelsProcessed = uniqueModels.size;
-    
+
     // Calculate progress
     let progress = 0;
     let status: 'completed' | 'processing' | 'queued' | 'failed' = prescription.processingStatus;
-    
+
     if (status === 'completed') {
       progress = 100;
     } else if (status === 'processing') {
@@ -71,7 +69,7 @@ export default function ProcessingQueue() {
     } else if (status === 'failed') {
       progress = Math.round((modelsProcessed / totalModels) * 100);
     }
-    
+
     // Calculate queue position for queued items
     let queuePosition = undefined;
     if (status === 'queued' && Array.isArray(prescriptions)) {
@@ -80,7 +78,7 @@ export default function ProcessingQueue() {
         .sort((a: any, b: any) => new Date(a.uploadedAt).getTime() - new Date(b.uploadedAt).getTime());
       queuePosition = queuedPrescriptions.findIndex((p: any) => p.id === prescription.id) + 1;
     }
-    
+
     return {
       id: prescription.id,
       fileName: prescription.fileName,
@@ -93,20 +91,23 @@ export default function ProcessingQueue() {
   }) : [];
 
   const handleViewResults = (prescriptionId: string) => {
-    setLocation(`/results?prescriptionId=${prescriptionId}`);
+    setLocation(`/?prescriptionId=${prescriptionId}`);
   };
 
   const handleCancel = async (prescriptionId: string) => {
     try {
       const response = await fetch(`/api/prescriptions/${prescriptionId}`, {
         method: 'DELETE',
+        headers: {
+          "X-API-Key": import.meta.env.VITE_EXTERNAL_API_KEY || "",
+        }
       });
-      
+
       if (!response.ok) throw new Error('Failed to cancel prescription');
-      
+
       // Invalidate and refetch prescriptions
       queryClient.invalidateQueries({ queryKey: ['/api/prescriptions'] });
-      
+
       toast({
         title: "Prescription cancelled",
         description: "The prescription has been removed from the queue",
@@ -124,13 +125,16 @@ export default function ProcessingQueue() {
     try {
       const response = await fetch(`/api/prescriptions/${prescriptionId}/retry`, {
         method: 'POST',
+        headers: {
+          "X-API-Key": import.meta.env.VITE_EXTERNAL_API_KEY || "",
+        }
       });
-      
+
       if (!response.ok) throw new Error('Failed to retry prescription');
-      
+
       // Invalidate and refetch prescriptions
       queryClient.invalidateQueries({ queryKey: ['/api/prescriptions'] });
-      
+
       toast({
         title: "Prescription retry started",
         description: "The prescription has been queued for reprocessing",
@@ -269,19 +273,18 @@ export default function ProcessingQueue() {
                     <Progress value={item.progress} className="h-2" />
                   </div>
                 )}
-                <span className={`text-sm ${
-                  item.status === 'completed' ? 'text-green-600' :
-                  item.status === 'processing' ? 'text-blue-600' :
-                  item.status === 'failed' ? 'text-red-600' :
-                  'text-muted-foreground'
-                }`} data-testid={`queue-item-progress-${item.id}`}>
+                <span className={`text-sm ${item.status === 'completed' ? 'text-green-600' :
+                    item.status === 'processing' ? 'text-blue-600' :
+                      item.status === 'failed' ? 'text-red-600' :
+                        'text-muted-foreground'
+                  }`} data-testid={`queue-item-progress-${item.id}`}>
                   {getProgressText(item)}
                 </span>
                 {getActionButton(item)}
               </div>
             </div>
           ))}
-          
+
           {queueItems.length === 0 && (
             <div className="text-center py-8 text-muted-foreground" data-testid="empty-queue-message">
               No items in processing queue

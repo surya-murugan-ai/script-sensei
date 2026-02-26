@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,21 +6,21 @@ import { CloudUpload, X, Play, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { useFileContext, UploadedFile } from "@/contexts/FileContext";
 
 interface FileUploadProps {
-  selectedFiles?: File[];
-  onFilesSelected?: (files: File[]) => void;
+  selectedFiles: File[];
+  onFilesSelected: (files: File[]) => void;
 }
 
-// UploadedFile interface is now imported from context
+interface UploadedFile {
+  file: File;
+  id?: string;
+  status: 'ready' | 'processing' | 'completed' | 'error';
+  progress?: number;
+}
 
-export default function FileUpload({ selectedFiles: propSelectedFiles, onFilesSelected: propOnFilesSelected }: FileUploadProps) {
-  const { selectedFiles: contextSelectedFiles, setSelectedFiles: contextSetSelectedFiles, uploadedFiles, setUploadedFiles } = useFileContext();
-  
-  // Use context values if available, otherwise fall back to props
-  const selectedFiles = contextSelectedFiles.length > 0 ? contextSelectedFiles : (propSelectedFiles || []);
-  const onFilesSelected = contextSetSelectedFiles || propOnFilesSelected || (() => {});
+export default function FileUpload({ selectedFiles, onFilesSelected }: FileUploadProps) {
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -34,6 +34,9 @@ export default function FileUpload({ selectedFiles: propSelectedFiles, onFilesSe
       // apiRequest returns a Response, we need to handle FormData differently
       const response = await fetch("/api/prescriptions/upload", {
         method: "POST",
+        headers: {
+          "X-API-Key": import.meta.env.VITE_EXTERNAL_API_KEY || "",
+        },
         body: formData,
         credentials: "include",
       });
@@ -62,11 +65,11 @@ export default function FileUpload({ selectedFiles: propSelectedFiles, onFilesSe
   });
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    const newFiles: UploadedFile[] = acceptedFiles.map(file => ({
+    const newFiles = acceptedFiles.map(file => ({
       file,
       status: 'ready' as const
     }));
-    setUploadedFiles((prev: UploadedFile[]) => [...prev, ...newFiles]);
+    setUploadedFiles(prev => [...prev, ...newFiles]);
     onFilesSelected([...selectedFiles, ...acceptedFiles]);
   }, [selectedFiles, onFilesSelected]);
 
@@ -80,7 +83,7 @@ export default function FileUpload({ selectedFiles: propSelectedFiles, onFilesSe
   });
 
   const removeFile = (index: number) => {
-    setUploadedFiles((prev: UploadedFile[]) => prev.filter((_, i) => i !== index));
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
     onFilesSelected(selectedFiles.filter((_, i) => i !== index));
   };
 
@@ -94,14 +97,17 @@ export default function FileUpload({ selectedFiles: propSelectedFiles, onFilesSe
     try {
       const files = uploadedFiles.map(f => f.file);
       const uploadResult = await uploadMutation.mutateAsync(files);
-      
+
       // Fetch current configuration for processing
       let selectedModels = ['openai', 'claude', 'gemini'];
       let customPrompts = {};
-      
+
       try {
         const configResponse = await fetch('/api/configs', {
-          credentials: 'include'
+          credentials: 'include',
+          headers: {
+            "X-API-Key": import.meta.env.VITE_EXTERNAL_API_KEY || "",
+          }
         });
         if (configResponse.ok) {
           const configs = await configResponse.json();
@@ -112,77 +118,58 @@ export default function FileUpload({ selectedFiles: propSelectedFiles, onFilesSe
       } catch (error) {
         console.warn('Failed to fetch config, using defaults:', error);
       }
-      
+
       // Then process each uploaded prescription with AI
       if (uploadResult && uploadResult.prescriptions) {
-        // Process all images in parallel for better performance
-        const processingPromises = uploadResult.prescriptions.map(async (prescription: any) => {
+        for (const prescription of uploadResult.prescriptions) {
           // Find the corresponding file for this prescription
           const file = files.find(f => f.name === prescription.fileName);
-          if (!file) return;
-          
-          // Update UI to show processing status
-          setUploadedFiles((prev: UploadedFile[]) => 
-            prev.map((uf: UploadedFile) => 
-              uf.file.name === file.name ? { ...uf, status: 'processing' as const } : uf
-            )
-          );
-          
-          // Create FormData for processing
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('selectedModels', JSON.stringify(selectedModels));
-          formData.append('customPrompts', JSON.stringify(customPrompts));
-          
-          try {
+          if (file) {
+            // Update UI to show processing status
+            setUploadedFiles(prev =>
+              prev.map(uf =>
+                uf.file.name === file.name ? { ...uf, status: 'processing' } : uf
+              )
+            );
+
+            // Create FormData for processing
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('selectedModels', JSON.stringify(selectedModels));
+            formData.append('customPrompts', JSON.stringify(customPrompts));
+
             // Process with AI models
             const processResponse = await fetch(`/api/prescriptions/${prescription.id}/process`, {
               method: "POST",
+              headers: {
+                "X-API-Key": import.meta.env.VITE_EXTERNAL_API_KEY || "",
+              },
               body: formData,
               credentials: "include",
             });
 
             if (!processResponse.ok) {
               // Update UI to show error status
-              setUploadedFiles((prev: UploadedFile[]) => 
-                prev.map((uf: UploadedFile) => 
-                  uf.file.name === file.name ? { ...uf, status: 'error' as const } : uf
+              setUploadedFiles(prev =>
+                prev.map(uf =>
+                  uf.file.name === file.name ? { ...uf, status: 'error' } : uf
                 )
               );
               throw new Error(`Processing failed for ${prescription.fileName}`);
             } else {
-            // Update UI to show completed status
-            setUploadedFiles((prev: UploadedFile[]) => 
-              prev.map((uf: UploadedFile) => 
-                uf.file.name === file.name ? { ...uf, status: 'completed' as const } : uf
-              )
-            );
-            
-            // 🔥 REFRESH DATA IMMEDIATELY after each image completes
-            queryClient.invalidateQueries({ queryKey: ['/api/prescriptions'] });
-            queryClient.invalidateQueries({ queryKey: ['/api/extraction-results'] });
-            // Force refetch to ensure UI updates immediately
-            queryClient.refetchQueries({ queryKey: ['/api/prescriptions'] });
-            queryClient.refetchQueries({ queryKey: ['/api/extraction-results'] });
+              // Update UI to show completed status
+              setUploadedFiles(prev =>
+                prev.map(uf =>
+                  uf.file.name === file.name ? { ...uf, status: 'completed' } : uf
+                )
+              );
             }
-          } catch (error) {
-            // Update UI to show error status
-            setUploadedFiles((prev: UploadedFile[]) => 
-              prev.map((uf: UploadedFile) => 
-                uf.file.name === file.name ? { ...uf, status: 'error' as const } : uf
-              )
-            );
-            console.error(`Processing failed for ${prescription.fileName}:`, error);
           }
-        });
-        
-        // Wait for all processing to complete
-        await Promise.allSettled(processingPromises);
-        
-        // Clear uploaded files after successful processing
-        setUploadedFiles([]);
-        onFilesSelected([]);
-        
+        }
+
+        // Invalidate queries to refresh data
+        queryClient.invalidateQueries({ queryKey: ['/api/prescriptions'] });
+
         toast({
           title: "Processing completed",
           description: `${uploadResult.prescriptions.length} prescriptions processed with AI models`,
@@ -209,11 +196,10 @@ export default function FileUpload({ selectedFiles: propSelectedFiles, onFilesSe
         {/* Drag and Drop Area */}
         <div
           {...getRootProps()}
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition-all cursor-pointer ${
-            isDragActive
+          className={`border-2 border-dashed rounded-lg p-8 text-center transition-all cursor-pointer ${isDragActive
               ? "border-primary bg-primary/5"
               : "border-border hover:border-primary hover:bg-primary/5"
-          }`}
+            }`}
           data-testid="drop-zone"
         >
           <input {...getInputProps()} data-testid="file-input" />
@@ -238,8 +224,8 @@ export default function FileUpload({ selectedFiles: propSelectedFiles, onFilesSe
         {uploadedFiles.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="file-preview-grid">
             {uploadedFiles.map((uploadedFile, index) => (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 className="bg-muted rounded-lg p-4 fade-in"
                 data-testid={`file-preview-${index}`}
               >
@@ -269,8 +255,8 @@ export default function FileUpload({ selectedFiles: propSelectedFiles, onFilesSe
                   )}
                 </div>
                 <div className="space-y-2">
-                  <p 
-                    className="text-sm font-medium text-foreground truncate" 
+                  <p
+                    className="text-sm font-medium text-foreground truncate"
                     title={uploadedFile.file.name}
                     data-testid={`file-name-${index}`}
                   >
@@ -280,13 +266,12 @@ export default function FileUpload({ selectedFiles: propSelectedFiles, onFilesSe
                     <span className="text-muted-foreground" data-testid={`file-size-${index}`}>
                       {formatFileSize(uploadedFile.file.size)}
                     </span>
-                    <span 
-                      className={`px-2 py-1 rounded-full ${
-                        uploadedFile.status === 'ready' ? 'text-green-600 bg-green-50' :
-                        uploadedFile.status === 'processing' ? 'text-blue-600 bg-blue-50' :
-                        uploadedFile.status === 'completed' ? 'text-green-600 bg-green-100' :
-                        'text-red-600 bg-red-50'
-                      }`}
+                    <span
+                      className={`px-2 py-1 rounded-full ${uploadedFile.status === 'ready' ? 'text-green-600 bg-green-50' :
+                          uploadedFile.status === 'processing' ? 'text-blue-600 bg-blue-50' :
+                            uploadedFile.status === 'completed' ? 'text-green-600 bg-green-100' :
+                              'text-red-600 bg-red-50'
+                        }`}
                       data-testid={`file-status-${index}`}
                     >
                       {uploadedFile.status.charAt(0).toUpperCase() + uploadedFile.status.slice(1)}
@@ -302,7 +287,7 @@ export default function FileUpload({ selectedFiles: propSelectedFiles, onFilesSe
         {uploadedFiles.length > 0 && (
           <div className="flex items-center justify-between" data-testid="batch-actions">
             <div className="flex items-center space-x-4">
-              <Button 
+              <Button
                 onClick={processAll}
                 disabled={uploadMutation.isPending}
                 data-testid="button-process-all"
@@ -310,8 +295,8 @@ export default function FileUpload({ selectedFiles: propSelectedFiles, onFilesSe
                 <Play className="w-4 h-4 mr-2" />
                 {uploadMutation.isPending ? "Processing..." : "Process All"}
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={clearAll}
                 data-testid="button-clear-all"
               >
