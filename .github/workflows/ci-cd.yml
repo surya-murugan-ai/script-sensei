@@ -175,21 +175,9 @@ jobs:
             echo "🔐 Logging into GitHub Container Registry..."
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
-            # Pull latest Docker image
-            echo "🐳 Pulling latest Docker image..."
-            docker-compose pull
-            
-            # Backup database before migrations
-            echo "💾 Creating database backup..."
-            docker-compose exec -T postgres pg_dump -U postgres scriptsensei > backup_$(date +%Y%m%d_%H%M%S).sql || echo "⚠️ Backup failed, continuing..."
-            
-            # Run database migrations (only if needed)
-            echo "🗄️ Running database migrations..."
-            docker-compose exec app npm run db:push || echo "⚠️ Migration completed or skipped"
-            
-            # Restart services with new image
-            echo "🔄 Restarting services..."
-            docker-compose up -d
+            # Build and Restart services
+            echo "🔄 Building and restarting services..."
+            docker-compose up -d --build
             
             # Clean up old images
             echo "🧹 Cleaning up..."
